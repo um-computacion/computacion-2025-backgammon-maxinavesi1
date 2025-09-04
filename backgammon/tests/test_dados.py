@@ -2,6 +2,7 @@ import unittest
 from backgammon.core.dados import Dados
 
 class PruebasDados(unittest.TestCase):
+    """"Maneja tiradas de dados."""
     def test_formato_tirada(self):
         d = Dados(semilla=123)
         d1, d2, movs = d.tirar()
