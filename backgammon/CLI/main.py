@@ -1,8 +1,16 @@
+"""CLI mínima para probar el juego.
+
+Uso:
+    python -m backgammon.cli.main
+    python -m backgammon.cli.main --tirar
+"""
+
 import sys
 from backgammon.core.juego import Juego
 from backgammon.core.jugador import Jugador
 
 def main():
+    """Crea dos jugadores, instancia el juego y permite tirar dados con --tirar."""
     j1 = Jugador("Blancas")
     j2 = Jugador("Negras")
     juego = Juego(j1, j2)
@@ -17,3 +25,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
