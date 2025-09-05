@@ -20,8 +20,8 @@ class Juego:
 
     def tirar(self):
         """Realiza una tirada de dados y la devuelve."""
-    d1, d2, movimientos = self.__dados__.tirar()
-    return  
+        d1, d2, movimientos = self.__dados__.tirar()
+        return  d1, d2, movimientos
 
 
     def cambiar_turno(self):
