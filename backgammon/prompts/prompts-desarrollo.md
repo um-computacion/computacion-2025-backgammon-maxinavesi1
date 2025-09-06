@@ -50,3 +50,28 @@ class Jugador:
     @property
     def nombre(self):
         return self.__nombre__
+
+
+
+**Herramienta:** ChatGPT 
+
+Prompt:
+Necesito un Dockerfile simple para un proyecto Python. Que use una imagen liviana oficial, instale requirements.txt, copie el paquete backgammon/ y deje como comando por defecto ejecutar los tests con python -m unittest discover backgammon/tests. También un .dockerignore mínimo para no copiar cachés. Texto corto y en español.
+
+**Respuesta:
+Dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY backgammon ./backgammon
+CMD ["python","-m","unittest","discover","backgammon/tests"]
+
+.dockerignore:
+__pycache__/
+*.pyc
+*.log
+.venv/
+**/.DS_Store
+build/
+dist/
