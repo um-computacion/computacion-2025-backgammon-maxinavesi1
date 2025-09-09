@@ -1,0 +1,13 @@
+[run]
+source = backgammon
+branch = True
+omit =
+    backgammon/pygame_ui/*
+    backgammon/cli/*
+
+[report]
+show_missing = True
+skip_empty = True
+exclude_lines =
+    if __name__ == "__main__":
+
