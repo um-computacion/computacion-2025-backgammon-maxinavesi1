@@ -19,6 +19,19 @@ class PruebasTablero(unittest.TestCase):
         with self.assertRaises(ValueError):
             t.punto(-1)
 
+from backgammon.core.tablero import FICHAS_POR_JUGADOR
+
+def test_hay_ganador_false_e_id_none(self):
+    t = Tablero()
+    self.assertFalse(t.hay_ganador())
+    self.assertIsNone(t.id_ganador())
+
+def test_hay_ganador_true_e_id(self):
+    t = Tablero()
+    t._Tablero__salidas__ = {7: FICHAS_POR_JUGADOR}
+    self.assertTrue(t.hay_ganador())
+    self.assertEqual(t.id_ganador(), 7)
+
 
 if __name__ == "__main__":
     unittest.main()
