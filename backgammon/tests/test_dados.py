@@ -16,6 +16,12 @@ class PruebasDados(unittest.TestCase):
             d1, d2, _ = d.tirar()
             self.assertTrue(1 <= d1 <= 6)
             self.assertTrue(1 <= d2 <= 6)
+    def test_ultimo_tiro_actualiza(self):
+        d = Dados(semilla=7)
+        self.assertIsNone(d.ultimo_tiro())
+        d1, d2, movs = d.tirar()
+        self.assertEqual(d.ultimo_tiro(), (d1, d2, movs))
+
 
 if __name__ == "__main__":
     unittest.main()
