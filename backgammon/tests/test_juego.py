@@ -12,5 +12,11 @@ class PruebasJuego(unittest.TestCase):
         r = g.tirar()
         self.assertEqual(len(r), 3)  
 
+    def test_cambiar_turno(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertEqual(g.jugador_actual.nombre, "A")
+        g.cambiar_turno()
+        self.assertEqual(g.jugador_actual.nombre, "B")
+
 if __name__ == "__main__":
     unittest.main()

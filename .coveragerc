@@ -2,12 +2,13 @@
 source = backgammon
 branch = True
 omit =
-    backgammon/pygame_ui/*
-    backgammon/cli/*
+    backgammon/tests/*      
+    backgammon/cli/*        
+    backgammon/pygame_ui/*  
 
 [report]
 show_missing = True
 skip_empty = True
 exclude_lines =
     if __name__ == "__main__":
-
+    ^\s*unittest\.main\(\)
