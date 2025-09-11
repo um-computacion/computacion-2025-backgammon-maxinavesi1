@@ -44,6 +44,15 @@ class PruebasDados(unittest.TestCase):
                 return
         self.fail("Todas las tiradas fueron dobles en 300 intentos (muy improbable)")
 
+    def test_fijar_semilla_reproduce_y_resetea(self):
+        d = Dados()
+        d.fijar_semilla(123)
+        r1 = d.tirar()
+        d.fijar_semilla(123)
+        r2 = d.tirar()
+        self.assertEqual(r1, r2)
+        d.fijar_semilla(321)
+        self.assertIsNone(d.ultimo_tiro())
 
 if __name__ == "__main__":
     unittest.main()
