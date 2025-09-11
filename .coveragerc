@@ -1,10 +1,10 @@
 [run]
-source = backgammon
+# Medimos únicamente el paquete de lógica:
+source = backgammon/core
 branch = True
 omit =
-    backgammon/tests/*      
-    backgammon/cli/*        
-    backgammon/pygame_ui/*  
+    
+    */__init__.py
 
 [report]
 show_missing = True
@@ -12,3 +12,4 @@ skip_empty = True
 exclude_lines =
     if __name__ == "__main__":
     ^\s*unittest\.main\(\)
+
