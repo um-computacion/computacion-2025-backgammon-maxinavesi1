@@ -34,3 +34,8 @@ class Dados:
         d1, d2, movs = d.tirar()
         assert d.ultimo_tiro() == (d1, d2, movs)
 
+    def fijar_semilla(self, semilla):
+        import random  
+        self.__semilla__ = semilla
+        self.__rng__ = random.Random(semilla)
+        self.__ultimo_tiro__ = None
