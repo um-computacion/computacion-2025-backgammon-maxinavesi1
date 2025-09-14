@@ -24,3 +24,34 @@ def dibujar_puntos(superficie):
     for i in range(12):
         x = margen + i * espacio + espacio // 2
         pygame.draw.circle(superficie, COLOR_PUNTO, (x, y_inf), radio)
+
+    def iniciar_ui(ancho=ANCHO, alto=ALTO):
+        """Arranca la ventana principal."""
+        pygame.init()
+        pantalla = pygame.display.set_mode((ancho, alto))
+        pygame.display.set_caption("Backgammon — demo")
+        reloj = pygame.time.Clock()
+
+        fuente = pygame.font.SysFont(None, 24)
+        texto = fuente.render("UI mínima — ESC para salir", True, COLOR_TEXTO)
+
+        corriendo = True
+        while corriendo:
+            for evento in pygame.event.get():
+                if evento.type == pygame.QUIT:
+                    corriendo = False
+                elif evento.type == pygame.KEYDOWN and evento.key == pygame.K_ESCAPE:
+                    corriendo = False
+
+            pantalla.fill(COLOR_FONDO)
+            dibujar_puntos(pantalla)
+            pantalla.blit(texto, (20, 20))
+
+            pygame.display.flip()
+            reloj.tick(FPS)
+
+        pygame.quit()
+        sys.exit(0)
+
+if __name__ == "__main__":
+    iniciar_ui()
