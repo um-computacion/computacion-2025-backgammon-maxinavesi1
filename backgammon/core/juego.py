@@ -1,6 +1,7 @@
 from backgammon.core.tablero import Tablero
 from backgammon.core.dados import Dados
-from backgammon.core.jugador import Jugador 
+from backgammon.core.jugador import Jugador  
+
 
 class Juego:
     """Coordina el estado del juego, los dados y el turno actual."""
@@ -10,7 +11,9 @@ class Juego:
         self.__tablero__ = Tablero()
         self.__jugadores__ = [jugador1, jugador2]
         self.__dados__ = Dados()
-        self.__indice_jugador_actual__ = 0 if indice_inicial not in (0, 1) else indice_inicial
+        self.__indice_jugador_actual__ = (
+            0 if indice_inicial not in (0, 1) else indice_inicial
+        )
         self.__barra__ = {jugador1.id: 0, jugador2.id: 0}
         self.__movs_restantes__ = []
 
@@ -36,8 +39,8 @@ class Juego:
 
 
     def aplicar_movimiento(self, desde, hasta):
-        """Mueve una ficha del jugador actual si la distancia está disponible. """
-
+        """Mueve una ficha del jugador actual si la distancia está disponible.
+        """
         distancia = abs(hasta - desde)
         if distancia not in self.__movs_restantes__:
             return False
@@ -47,3 +50,22 @@ class Juego:
             
             self.__movs_restantes__.remove(distancia)
         return ok
+
+
+    def cambiar_turno(self):
+        """Alterna el turno entre 0 y 1."""
+        self.__indice_jugador_actual__ = 1 - self.__indice_jugador_actual__
+
+    def termino(self):
+        """Indica si el juego terminó (hay ganador)."""
+        return self.__tablero__.hay_ganador()
+
+    def ganador(self):
+        """Devuelve el Jugador ganador o None si no hay."""
+        w = self.__tablero__.id_ganador()
+        if w is None:
+            return None
+        for j in self.__jugadores__:
+            if j.id == w:
+                return j
+        return None
