@@ -20,7 +20,15 @@ class PruebasJuego(unittest.TestCase):
     def test_tirar_devuelve_3_valores(self):
         g = Juego(Jugador("A"), Jugador("B"))
         r = g.tirar()
-        self.assertEqual(len(r), 3) 
+        self.assertEqual(len(r), 3)
+
+    def test_indice_inicial_valido_1(self):
+        g = Juego(Jugador("A"), Jugador("B"), indice_inicial=1)
+        self.assertEqual(g.jugador_actual.nombre, "B")
+
+    def test_indice_inicial_invalido_se_normaliza_a_0(self):
+        g = Juego(Jugador("A"), Jugador("B"), indice_inicial=9)
+        self.assertEqual(g.jugador_actual.nombre, "A")
 
     def test_cambiar_turno(self):
         g = Juego(Jugador("A"), Jugador("B"))
@@ -43,10 +51,9 @@ class PruebasJuego(unittest.TestCase):
     def test_ganador_none_cuando_id_no_coincide(self):
         a = Jugador("A"); b = Jugador("B")
         g = Juego(a, b)
-        g.__tablero__ = _TableroFalso(999)  
+        g.__tablero__ = _TableroFalso(999)
         self.assertTrue(g.termino())
         self.assertIsNone(g.ganador())
-
-
+    
 if __name__ == "__main__":
     unittest.main()
