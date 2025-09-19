@@ -54,6 +54,35 @@ class PruebasJuego(unittest.TestCase):
         g.__tablero__ = _TableroFalso(999)
         self.assertTrue(g.termino())
         self.assertIsNone(g.ganador())
-    
+     
+    def test_movimientos_quedan_guardados_y_son_copia(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        d1, d2, movs = g.tirar()
+        self.assertEqual(sorted(g.movimientos_disponibles()), sorted(movs))
+        copia = g.movimientos_disponibles()
+        copia.clear()
+        self.assertEqual(sorted(g.movimientos_disponibles()), sorted(movs))
+
+    def test_movimientos_disponibles_y_aplicar(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        pid = g.jugador_actual.id
+        g.__tablero__.colocar_ficha(pid, 0)
+        ok = g.aplicar_movimiento(0, 3)
+        self.assertTrue(ok)
+        self.assertEqual(g.movimientos_disponibles(), [])
+        self.assertEqual(g.__tablero__.punto(0), [])
+        self.assertEqual(g.__tablero__.punto(3), [pid])
+
+    def test_aplicar_movimiento_distancia_invalida(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [2]
+        pid = g.jugador_actual.id
+        g.__tablero__.colocar_ficha(pid, 0)
+        ok = g.aplicar_movimiento(0, 3)
+        self.assertFalse(ok)
+        self.assertEqual(g.__tablero__.punto(0), [pid])
+        self.assertEqual(g.__tablero__.punto(3), [])
+
 if __name__ == "__main__":
     unittest.main()
