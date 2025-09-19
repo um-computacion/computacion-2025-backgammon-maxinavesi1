@@ -85,4 +85,4 @@ class PruebasJuego(unittest.TestCase):
         self.assertEqual(g.__tablero__.punto(3), [])
 
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main() 
