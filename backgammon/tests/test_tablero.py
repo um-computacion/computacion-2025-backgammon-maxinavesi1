@@ -58,6 +58,19 @@ class PruebasTablero(unittest.TestCase):
             t.mover_ficha(1, 0, PUNTOS)
         with self.assertRaises(ValueError):
             t.mover_ficha(1, -1, 0)
-            
+
+    def test_barra_helpers(self):
+        t = Tablero()
+        self.assertEqual(t.fichas_en_barra(1), 0)
+        t.enviar_a_barra(1)
+        t.enviar_a_barra(1)
+        self.assertEqual(t.fichas_en_barra(1), 2)
+
+    def test_salidas_helpers(self):
+        t = Tablero()
+        self.assertEqual(t.fichas_salidas(2), 0)
+        t.registrar_salida(2)
+        self.assertEqual(t.fichas_salidas(2), 1)
+                
 if __name__ == "__main__":
     unittest.main()

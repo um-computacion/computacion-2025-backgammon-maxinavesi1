@@ -64,3 +64,21 @@ class Tablero:
             self.colocar_ficha(jugador_id, hasta)
             return True
         return False
+    
+    def fichas_en_barra(self, jugador_id):
+        """Cantidad de fichas del jugador en la barra."""
+        return self.__barra__.get(jugador_id, 0)
+
+    def enviar_a_barra(self, jugador_id):
+        """Suma 1 ficha a la barra del jugador."""
+        self.__barra__[jugador_id] = self.fichas_en_barra(jugador_id) + 1
+        return self.__barra__[jugador_id]
+
+    def fichas_salidas(self, jugador_id):
+        """Cantidad de fichas que ya salieron del tablero."""
+        return self.__salidas__.get(jugador_id, 0)
+
+    def registrar_salida(self, jugador_id):
+        """Suma 1 ficha a las salidas del jugador."""
+        self.__salidas__[jugador_id] = self.fichas_salidas(jugador_id) + 1
+        return self.__salidas__[jugador_id]
