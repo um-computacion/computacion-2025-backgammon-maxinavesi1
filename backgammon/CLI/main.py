@@ -65,5 +65,28 @@ def main():
     print("Comando no reconocido.")
     _ayuda()
 
+    if cmd == "--poner" and len(args) >= 2:
+        try:
+            p = int(args[1])
+        except ValueError:
+            print("Punto inválido:", args[1])
+            return
+        pid = juego.jugador_actual.id
+        juego.__tablero__.colocar_ficha(pid, p)
+        print(f"Se colocó una ficha en el punto {p} para {juego.jugador_actual.nombre}")
+        return
+    
+    if cmd == "--mover" and len(args) >= 3:
+        try:
+            desde = int(args[1]); hasta = int(args[2])
+        except ValueError:
+            print("Parámetros inválidos. Ej: --mover 0 3")
+            return
+        ok = juego.aplicar_movimiento(desde, hasta)
+        print("Movimiento:", "OK" if ok else "NO se pudo")
+        print("Movs restantes:", juego.movimientos_disponibles())
+        return
+
+
 if __name__ == "__main__":
     main()
