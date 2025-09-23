@@ -9,6 +9,16 @@ def _ayuda():
     print("  --movs                      # ver movimientos disponibles")
     print("  --poner <p>                 # colocar ficha del jugador actual en el punto p")
     print("  --mover <desde> <hasta>     # mover ficha si la distancia está en los movimientos")
+    print("  --mover <desde> <hasta>     # mover ficha si la distancia está en los movimientos")
+    print("  --ayuda | -h                # mostrar esta ayuda")
+    
+    args = sys.argv[1:]
+    if args and args[0] in ("--ayuda", "-h"):
+        _ayuda()
+        return
+    if not args:
+        _ayuda()
+        return
 
 def main():
     j1 = Jugador("Blancas")
