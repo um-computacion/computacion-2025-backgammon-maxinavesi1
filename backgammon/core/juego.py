@@ -69,3 +69,12 @@ class Juego:
             if j.id == w:
                 return j
         return None
+
+    def colocar_ficha_en(self, punto: int) -> bool:
+        """Coloca una ficha del jugador actual en el punto dado."""
+        pid = self.jugador_actual.id
+        return self.__tablero__.colocar_ficha(pid, punto)
+
+    def mover_ficha(self, desde: int, hasta: int) -> bool:
+        """Envuelve aplicar_movimiento para la CLI."""
+        return self.aplicar_movimiento(desde, hasta)
