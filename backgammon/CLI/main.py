@@ -86,6 +86,12 @@ def main():
         print("Movs restantes:", juego.movimientos_disponibles())
         return
 
+    def main():
+        import sys
+        args = sys.argv[1:]
+        if not args or args[0] in ("--ayuda", "-h"):
+            _ayuda()
+            return  
 
 if __name__ == "__main__":
     main()
