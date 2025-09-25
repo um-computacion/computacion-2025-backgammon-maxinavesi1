@@ -92,6 +92,52 @@ def main():
         if not args or args[0] in ("--ayuda", "-h"):
             _ayuda()
             return  
+    j1 = Jugador("Blancas"); j2 = Jugador("Negras")
+    juego = Juego(j1, j2)
+
+    i = 0
+    while i < len(args):
+        cmd = args[i]
+
+        if cmd == "--tirar":
+            d1, d2, movs = juego.tirar()
+            print("Dados:", d1, "y", d2, "→ movs:", movs)
+            i += 1
+            continue
+
+        if cmd == "--movs":
+            print("Movimientos disponibles:", juego.movimientos_disponibles())
+            i += 1
+            continue
+
+        if cmd == "--poner":
+            if i + 1 >= len(args):
+                print("Falta <p> para --poner"); return
+            try:
+                p = int(args[i + 1])
+            except ValueError:
+                print("Punto inválido:", args[i + 1]); return
+            ok = juego.colocar_ficha_en(p)   
+            print(f"Se colocó una ficha en {p}" if ok else "No se pudo colocar la ficha")
+            i += 2
+            continue
+
+        if cmd == "--mover":
+            if i + 2 >= len(args):
+                print("Faltan <desde> <hasta> para --mover"); return
+            try:
+                desde = int(args[i + 1]); hasta = int(args[i + 2])
+            except ValueError:
+                print("Parámetros inválidos. Ej: --mover 0 3"); return
+            ok = juego.mover_ficha(desde, hasta)  # API pública
+            print("Movimiento:", "OK" if ok else "NO se pudo")
+            print("Movs restantes:", juego.movimientos_disponibles())
+            i += 3
+            continue
+
+        print("Comando no reconocido:", cmd)
+        _ayuda()
+        return
 
 if __name__ == "__main__":
     main()
