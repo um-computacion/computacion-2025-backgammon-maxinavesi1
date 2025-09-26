@@ -129,7 +129,7 @@ def main():
                 desde = int(args[i + 1]); hasta = int(args[i + 2])
             except ValueError:
                 print("Parámetros inválidos. Ej: --mover 0 3"); return
-            ok = juego.mover_ficha(desde, hasta)  # API pública
+            ok = juego.mover_ficha(desde, hasta)  
             print("Movimiento:", "OK" if ok else "NO se pudo")
             print("Movs restantes:", juego.movimientos_disponibles())
             i += 3

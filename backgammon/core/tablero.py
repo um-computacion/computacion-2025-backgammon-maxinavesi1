@@ -14,8 +14,15 @@ class Tablero:
         self.preparar_posicion_inicial()
 
     def preparar_posicion_inicial(self):
-        """Deja preparada la posición inicial (pendiente de completar)."""
-        pass
+        """Coloca algunas fichas de demo (no es la posición real del juego)."""
+        self.__salidas__.clear()
+        self.__barra__.clear()
+        self.__puntos__[0] = [1, 1]
+        self.__puntos__[23] = [2, 2]
+        for i in range(1, PUNTOS - 1):
+            if i not in (0, 23):
+                self.__puntos__[i] = []
+
 
     def validar_indice_punto(self, i):
         """Valida que i esté en [0, PUNTOS). Lanza ValueError si no."""
