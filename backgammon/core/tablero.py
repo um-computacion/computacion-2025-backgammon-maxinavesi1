@@ -1,4 +1,4 @@
-"""Estructura del tablero: puntos, barra y salidas."""
+"""Estructura del tablero: puntos, barra y salidas (versión simple y vacía)."""
 
 PUNTOS = 24
 FICHAS_POR_JUGADOR = 15
@@ -14,15 +14,10 @@ class Tablero:
         self.preparar_posicion_inicial()
 
     def preparar_posicion_inicial(self):
-        """Coloca algunas fichas de demo (no es la posición real del juego)."""
-        self.__salidas__.clear()
-        self.__barra__.clear()
-        self.__puntos__[0] = [1, 1]
-        self.__puntos__[23] = [2, 2]
-        for i in range(1, PUNTOS - 1):
-            if i not in (0, 23):
-                self.__puntos__[i] = []
-
+        """Deja el tablero en estado inicial VACÍO (los tests colocan fichas)."""
+        self.__salidas__ = {}
+        self.__barra__ = {}
+        self.__puntos__ = [[] for _ in range(PUNTOS)]
 
     def validar_indice_punto(self, i):
         """Valida que i esté en [0, PUNTOS). Lanza ValueError si no."""
@@ -34,20 +29,6 @@ class Tablero:
         self.validar_indice_punto(i)
         return self.__puntos__[i]
 
-    def hay_ganador(self):
-        """Indica si algún jugador sacó todas sus fichas."""
-        for cantidad in self.__salidas__.values():
-            if cantidad == FICHAS_POR_JUGADOR:
-                return True
-        return False
-
-    def id_ganador(self):
-        """Devuelve el id del jugador ganador o None."""
-        for pid, cantidad in self.__salidas__.items():
-            if cantidad == FICHAS_POR_JUGADOR:
-                return pid
-        return None
-        
     def colocar_ficha(self, jugador_id, punto):
         """Pone una ficha del jugador en el punto dado. Devuelve True."""
         self.validar_indice_punto(punto)
@@ -59,7 +40,7 @@ class Tablero:
         self.validar_indice_punto(punto)
         casilla = self.__puntos__[punto]
         if jugador_id in casilla:
-            casilla.remove(jugador_id)  
+            casilla.remove(jugador_id)
             return True
         return False
 
@@ -71,7 +52,7 @@ class Tablero:
             self.colocar_ficha(jugador_id, hasta)
             return True
         return False
-    
+
     def fichas_en_barra(self, jugador_id):
         """Cantidad de fichas del jugador en la barra."""
         return self.__barra__.get(jugador_id, 0)
@@ -89,3 +70,17 @@ class Tablero:
         """Suma 1 ficha a las salidas del jugador."""
         self.__salidas__[jugador_id] = self.fichas_salidas(jugador_id) + 1
         return self.__salidas__[jugador_id]
+
+    def hay_ganador(self):
+        """Indica si algún jugador sacó todas sus fichas."""
+        for cantidad in self.__salidas__.values():
+            if cantidad == FICHAS_POR_JUGADOR:
+                return True
+        return False
+
+    def id_ganador(self):
+        """Devuelve el id del jugador ganador o None."""
+        for pid, cantidad in self.__salidas__.items():
+            if cantidad == FICHAS_POR_JUGADOR:
+                return pid
+        return None
