@@ -19,6 +19,7 @@ def _ayuda():
     if not args:
         _ayuda()
         return
+    
 
 def main():
     j1 = Jugador("Blancas")
@@ -33,6 +34,7 @@ def main():
 
     cmd = args[0]
 
+    
     if cmd == "--tirar":
         d1, d2, movs = juego.tirar()
         print("Dados:", d1, "y", d2, "→ movs:", movs)
@@ -98,6 +100,7 @@ def main():
     i = 0
     while i < len(args):
         cmd = args[i]
+        
 
         if cmd == "--tirar":
             d1, d2, movs = juego.tirar()
