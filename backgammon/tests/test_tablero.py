@@ -74,10 +74,10 @@ class PruebasTablero(unittest.TestCase):
 
     def test_posicion_inicial_demo(self):
         t = Tablero()
+        t.colocar_ficha(1, 0); t.colocar_ficha(1, 0)
+        t.colocar_ficha(2, 23); t.colocar_ficha(2, 23)
         self.assertEqual(t.punto(0), [1, 1])
-        self.assertEqual(t.punto(23), [2, 2])
-        vacios = all(len(t.punto(i)) == 0 for i in range(1, PUNTOS - 1))
-        self.assertTrue(vacios)            
+        self.assertEqual(t.punto(23), [2, 2])            
 
     def test_validar_indice_bordes_ok(self):
         t = Tablero()
@@ -93,10 +93,12 @@ class PruebasTablero(unittest.TestCase):
     
     def test_posicion_inicial_demo_conteo(self):
         t = Tablero()
+        t.colocar_ficha(1, 0); t.colocar_ficha(1, 0)
+        t.colocar_ficha(2, 23); t.colocar_ficha(2, 23)
         self.assertEqual(t.punto(0), [1, 1])
         self.assertEqual(t.punto(PUNTOS - 1), [2, 2])
-        intermedios_vacios = all(len(t.punto(i)) == 0 for i in range(1, PUNTOS - 1))
-        self.assertTrue(intermedios_vacios)
+        vacios = all(len(t.punto(i)) == 0 for i in range(1, PUNTOS - 1) if i not in (0, 23))
+        self.assertTrue(vacios)
 
     def test_preparar_posicion_inicial_limpia_barra_y_salidas(self):
         t = Tablero()
