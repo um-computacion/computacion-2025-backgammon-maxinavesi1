@@ -104,11 +104,17 @@ class PruebasTablero(unittest.TestCase):
         t = Tablero()
         t._Tablero__barra__ = {7: 3}
         t._Tablero__salidas__ = {7: 5}
+        t.colocar_ficha(1, 0)
+        t.colocar_ficha(1, 0)
+        t.colocar_ficha(2, 23)
+        t.colocar_ficha(2, 23)
+
         t.preparar_posicion_inicial()
+
         self.assertEqual(t._Tablero__barra__, {})
         self.assertEqual(t._Tablero__salidas__, {})
-        self.assertEqual(t.punto(0), [1, 1])
-        self.assertEqual(t.punto(PUNTOS - 1), [2, 2])
+        self.assertEqual(t.punto(0), [])
+        self.assertEqual(t.punto(23), [])
 
 if __name__ == "__main__":
     unittest.main()
