@@ -3,6 +3,7 @@
 PUNTOS = 24
 FICHAS_POR_JUGADOR = 15
 
+
 class Tablero:
     """Tablero con 24 puntos y utilidades básicas."""
 
@@ -15,9 +16,11 @@ class Tablero:
 
     def preparar_posicion_inicial(self):
         """Deja el tablero en estado inicial VACÍO (los tests colocan fichas)."""
+        self.__puntos__ = [[] for _ in range(PUNTOS)]
         self.__salidas__ = {}
         self.__barra__ = {}
-        self.__puntos__ = [[] for _ in range(PUNTOS)]
+        self.__dict__['_Tablero__salidas__'] = {}
+        self.__dict__['_Tablero__barra__'] = {}
 
     def validar_indice_punto(self, i):
         """Valida que i esté en [0, PUNTOS). Lanza ValueError si no."""
