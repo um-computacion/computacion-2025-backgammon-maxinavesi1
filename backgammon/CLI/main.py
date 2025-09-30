@@ -11,7 +11,8 @@ def _ayuda():
     print("  --mover <desde> <hasta>     # mover ficha si la distancia está en los movimientos")
     print("  --mover <desde> <hasta>     # mover ficha si la distancia está en los movimientos")
     print("  --ayuda | -h                # mostrar esta ayuda")
-    
+    print("  --semilla <n>               # fija semilla para tiradas reproducibles")
+
     args = sys.argv[1:]
     if args and args[0] in ("--ayuda", "-h"):
         _ayuda()

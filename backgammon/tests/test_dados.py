@@ -54,6 +54,15 @@ class PruebasDados(unittest.TestCase):
         d.fijar_semilla(321)
         self.assertIsNone(d.ultimo_tiro())
 
+    def test_fijar_semilla_reproduce_tirada(self):
+        from backgammon.core.dados import Dados
+        d = Dados()
+        d.fijar_semilla(5)
+        a = d.tirar()
+        d.fijar_semilla(5)
+        b = d.tirar()
+        self.assertEqual(a, b)
+
 if __name__ == "__main__":
     unittest.main()
 
