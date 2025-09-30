@@ -84,5 +84,13 @@ class PruebasJuego(unittest.TestCase):
         self.assertEqual(g.__tablero__.punto(0), [pid])
         self.assertEqual(g.__tablero__.punto(3), [])
 
+    def test_juego_usar_semilla_reproduce(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(9)
+        a = g.tirar()
+        g.usar_semilla(9)
+        b = g.tirar()
+        self.assertEqual(a, b)
+
 if __name__ == "__main__":
     unittest.main() 
