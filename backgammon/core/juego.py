@@ -78,3 +78,7 @@ class Juego:
     def mover_ficha(self, desde: int, hasta: int) -> bool:
         """Envuelve aplicar_movimiento para la CLI."""
         return self.aplicar_movimiento(desde, hasta)
+
+    def usar_semilla(self, n: int):
+        """Configura la semilla en los dados del juego."""
+        self.__dados__.fijar_semilla(n)

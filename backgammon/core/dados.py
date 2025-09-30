@@ -28,6 +28,7 @@ class Dados:
     def ultimo_tiro(self):
         """Devuelve el último tiro registrado (o None si no hubo)."""
         return self.__ultimo_tiro__
+    
     def test_ultimo_tiro_actualiza(self):
         d = Dados(semilla=7)
         assert d.ultimo_tiro() is None
