@@ -11,12 +11,16 @@ class Juego:
         self.__tablero__ = Tablero()
         self.__jugadores__ = [jugador1, jugador2]
         self.__dados__ = Dados()
-        self.__indice_jugador_actual__ = (
-            0 if indice_inicial not in (0, 1) else indice_inicial
-        )
+        self.__indice_jugador_actual__ = 0 if indice_inicial not in (0, 1) else indice_inicial
         self.__barra__ = {jugador1.id: 0, jugador2.id: 0}
+        self.__estado__ = "inicial"         
         self.__movs_restantes__ = []
 
+    @property
+    def estado(self):
+        """Devuelve el estado textual del juego."""
+        return self.__estado__
+    
     @property
     def jugador_actual(self):
         """Devuelve el jugador que tiene el turno."""
@@ -28,9 +32,12 @@ class Juego:
         self.__dados__.fijar_semilla(semilla)
 
     def tirar(self):
-        """Realiza una tirada de dados y guarda los movimientos posibles."""
+        """Realiza una tirada de dados y la guarda como movimientos restantes."""
         d1, d2, movimientos = self.__dados__.tirar()
-        self.__movs_restantes__ = list(movimientos)  
+        self.__movs_restantes__ = list(movimientos)
+        if self.__estado__ == "inicial":
+            self.__estado__ = "en_curso"
+        self._actualizar_estado()
         return d1, d2, movimientos
 
     def movimientos_disponibles(self):
@@ -55,6 +62,8 @@ class Juego:
     def cambiar_turno(self):
         """Alterna el turno entre 0 y 1."""
         self.__indice_jugador_actual__ = 1 - self.__indice_jugador_actual__
+        self.__movs_restantes__.clear()
+        self._actualizar_estado()
 
     def termino(self):
         """Indica si el juego terminó (hay ganador)."""
