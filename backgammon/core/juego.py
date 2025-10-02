@@ -1,7 +1,7 @@
 from backgammon.core.tablero import Tablero
 from backgammon.core.dados import Dados
 from backgammon.core.jugador import Jugador  
-
+from backgammon.core.tablero import PUNTOS
 
 class Juego:
     """Coordina el estado del juego, los dados y el turno actual."""
@@ -79,15 +79,70 @@ class Juego:
                 return j
         return None
 
-    def colocar_ficha_en(self, punto: int) -> bool:
-        """Coloca una ficha del jugador actual en el punto dado."""
+    def colocar_ficha_en(self, punto):
+        """Coloca una ficha del jugador actual en 'punto'."""
         pid = self.jugador_actual.id
-        return self.__tablero__.colocar_ficha(pid, punto)
+        ok = self.__tablero__.colocar_ficha(pid, punto)
+        if ok and self.__estado__ == "inicial":
+            self.__estado__ = "en_curso"
+        self._actualizar_estado()
+        return ok
 
-    def mover_ficha(self, desde: int, hasta: int) -> bool:
-        """Envuelve aplicar_movimiento para la CLI."""
-        return self.aplicar_movimiento(desde, hasta)
+    def mover_ficha(self, desde, hasta):
+        """Mueve una ficha si la distancia está en los movimientos restantes."""
+        pid = self.jugador_actual.id
+        distancia = abs(hasta - desde)
+        if distancia not in self.__movs_restantes__:
+            return False
+        ok = self.__tablero__.mover_ficha(pid, desde, hasta)
+        if not ok:
+            return False
+        
+        self.__movs_restantes__.remove(distancia)
+
+        if not self.__movs_restantes__:
+            self.cambiar_turno()
+        else:
+            self._actualizar_estado()
+        return True
+    
+    def _actualizar_estado(self):
+        """Actualiza 'terminado' si hay ganador, o 'en_curso' en caso contrario."""
+        if self.__tablero__.hay_ganador():
+            self.__estado__ = "terminado"
+        else:
+            if self.__movs_restantes__ and self.__estado__ != "inicial":
+                self.__estado__ = "en_curso"
 
     def usar_semilla(self, n: int):
         """Configura la semilla en los dados del juego."""
         self.__dados__.fijar_semilla(n)
+
+    def estado_dict(self):
+        """Devuelve un snapshot del juego en un diccionario simple."""
+        puntos = [self.__tablero__.punto(i)[:] for i in range(PUNTOS)]
+        barra = {pid: self.__tablero__.fichas_en_barra(pid) for pid in self.__barra__.keys()}
+        salidas = {pid: self.__tablero__.fichas_salidas(pid) for pid in self.__barra__.keys()}
+
+        return {
+            "estado": self.__estado__,                       
+            "jugador_actual": self.jugador_actual.nombre,
+            "jugador_actual_id": self.jugador_actual.id,
+            "movs_restantes": self.__movs_restantes__[:],
+            "puntos": puntos,      
+            "barra": barra,        
+            "salidas": salidas,   
+            } 
+
+    def resumen_estado(self):
+        """String corto para imprimir en CLI o logs."""
+        e = self.estado_dict()
+        return (f"estado={e['estado']} | turno={e['jugador_actual']} "
+                f"(id {e['jugador_actual_id']}) | movs={e['movs_restantes']}")
+
+    def reiniciar(self):
+        """Pone tablero limpio, sin movs y turno del primer jugador."""
+        self.__tablero__.preparar_posicion_inicial()
+        self.__movs_restantes__.clear()
+        self.__indice_jugador_actual__ = 0
+        self.__estado__ = "inicial"
