@@ -1,12 +1,12 @@
 """Ventana mínima con Pygame para ver algo en pantalla.
 
 Uso:
-    python -m backgammon.pygame_ui.ventana
+    python -m backgammon.pygame.pygame_ui
 """
 
 import pygame
 import sys
-from backgammon.core.dados import Dados  # usamos los dados reales
+from backgammon.core.dados import Dados  
 
 ANCHO = 800
 ALTO = 600
