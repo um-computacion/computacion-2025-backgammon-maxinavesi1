@@ -110,6 +110,25 @@ def main():
             i += 1
             continue
 
+        if cmd == "--poner" and len(args) >= 2:
+            ok = juego.colocar_ficha_en(p)
+            if ok:
+                print(f"Se colocó una ficha en el punto {p} para {juego.jugador_actual.nombre}")
+            else:
+                print("Error:", juego.ultimo_error())
+            return
+
+        if cmd == "--mover" and len(args) >= 3:
+            ok = juego.mover_ficha(desde, hasta)
+            if ok:
+                print("Movimiento: OK")
+            else:
+                print("Movimiento: no se pudo")
+                print("Motivo:", juego.ultimo_error())
+            print("Movs restantes:", juego.movimientos_disponibles())
+            return
+
+
         print("Comando no reconocido:", cmd)
         _ayuda()
         return
