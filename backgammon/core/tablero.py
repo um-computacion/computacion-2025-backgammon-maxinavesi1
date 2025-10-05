@@ -87,3 +87,31 @@ class Tablero:
             if cantidad == FICHAS_POR_JUGADOR:
                 return pid
         return None
+
+    def _jugador_en_punto(self, jugador_id, punto):
+        self.validar_indice_punto(punto)
+        return jugador_id in self.__puntos__[punto]
+
+    def _bloqueado_por_oponente(self, jugador_id, punto):
+        """Un punto está bloqueado si tiene 2+ fichas del rival."""
+        self.validar_indice_punto(punto)
+        destino = self.__puntos__[punto]
+        if not destino:
+            return False
+        rival = destino[0] != jugador_id
+        return rival and len(destino) >= 2
+
+    def mover_ficha_seguro(self, jugador_id, desde, hasta):
+        """Valida ownership, rangos y bloqueo; mueve si se puede."""
+        self.validar_indice_punto(desde)
+        self.validar_indice_punto(hasta)
+
+        if jugador_id not in self.__puntos__[desde]:
+            return False
+
+        if self._bloqueado_por_oponente(jugador_id, hasta):
+            return False
+
+        self.__puntos__[desde].remove(jugador_id)
+        self.__puntos__[hasta].append(jugador_id)
+        return True
