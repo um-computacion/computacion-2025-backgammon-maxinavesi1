@@ -54,7 +54,7 @@ class PruebasJuego(unittest.TestCase):
         g.__tablero__ = _TableroFalso(999)
         self.assertTrue(g.termino())
         self.assertIsNone(g.ganador())
-     
+
     def test_movimientos_quedan_guardados_y_son_copia(self):
         g = Juego(Jugador("A"), Jugador("B"))
         d1, d2, movs = g.tirar()
@@ -92,5 +92,63 @@ class PruebasJuego(unittest.TestCase):
         b = g.tirar()
         self.assertEqual(a, b)
 
+
+    def test_tirar_cambia_estado_a_en_curso(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertEqual(g.estado, "inicial")
+        g.tirar()
+        self.assertEqual(g.estado, "en_curso")
+
+    def test_colocar_cambia_estado_desde_inicial(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertEqual(g.estado, "inicial")
+        self.assertTrue(g.colocar_ficha_en(0))
+        self.assertEqual(g.estado, "en_curso")
+
+    def test_cambiar_turno_limpia_movs(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [2, 3]
+        g.cambiar_turno()
+        self.assertEqual(g.jugador_actual.nombre, "B")
+        self.assertEqual(g.movimientos_disponibles(), [])
+
+    def test_mover_ficha_consumo_y_cambio_turno(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.__movs_restantes__ = [2]
+        g.__tablero__.colocar_ficha(pid, 0)
+        ok = g.mover_ficha(0, 2)
+        self.assertTrue(ok)
+        self.assertEqual(g.movimientos_disponibles(), [])
+        self.assertEqual(g.jugador_actual.nombre, "B")  
+
+    def test_mover_ficha_distancia_valida_pero_sin_ficha_no_mueve(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)  
+        self.assertFalse(ok)
+        self.assertEqual(g.movimientos_disponibles(), [3])
+
+    def test_estado_dict_y_resumen_formato(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        e = g.estado_dict()
+        self.assertIn("estado", e)
+        self.assertIn("jugador_actual", e)
+        self.assertIn("movs_restantes", e)
+        s = g.resumen_estado()
+        self.assertIsInstance(s, str)
+        self.assertIn("estado=", s)
+        self.assertIn("movs=", s)
+
+    def test_reiniciar_restaurar_estado(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [4]
+        g.cambiar_turno()
+        g.reiniciar()
+        self.assertEqual(g.estado, "inicial")
+        self.assertEqual(g.jugador_actual.nombre, "A")
+        self.assertEqual(g.movimientos_disponibles(), [])
+
+
 if __name__ == "__main__":
-    unittest.main() 
+    unittest.main()
