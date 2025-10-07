@@ -1,15 +1,21 @@
 [run]
-# Medimos únicamente el paquete de lógica:
-source = backgammon/core
+# Medimos el paquete completo, pero excluimos CLI y Pygame del cómputo.
 branch = True
+source =
+    backgammon
 omit =
-    
+    backgammon/cli/*
+    backgammon/pygame/*
     */__init__.py
 
 [report]
 show_missing = True
 skip_empty = True
 exclude_lines =
+    pragma: no cover
     if __name__ == "__main__":
     ^\s*unittest\.main\(\)
+    ^\s*pass$
+    ^\s*raise\s+NotImplementedError
+
 
