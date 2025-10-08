@@ -1,15 +1,16 @@
 [run]
-# Medimos únicamente el paquete de lógica:
+# Mide únicamente el core del proyecto (no CLI, no Pygame, no tests)
 source = backgammon/core
 branch = True
 omit =
-    
     */__init__.py
 
 [report]
 show_missing = True
 skip_empty = True
-exclude_lines =
-    if __name__ == "__main__":
-    ^\s*unittest\.main\(\)
-
+# (cinturón y tiradores) fuerza el filtrado también al generar el informe
+include =
+    backgammon/core/*.py
+omit =
+    */__init__.py
+    */tests/*
