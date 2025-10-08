@@ -20,13 +20,13 @@ class PruebasDados(unittest.TestCase):
 
     def test_ultimo_tiro_actualiza(self):
         d = Dados(semilla=7)
-        self.assertIsNone(d.ultimo_tiro())  
+        self.assertIsNone(d.ultimo_tiro())
         d1, d2, movs = d.tirar()
         self.assertEqual(d.ultimo_tiro(), (d1, d2, movs))
 
     def test_tirar_con_doble_registra_cuatro_movimientos(self):
         d = Dados(semilla=1)
-        for _ in range(300):           
+        for _ in range(300):
             d1, d2, movs = d.tirar()
             if d1 == d2:
                 self.assertEqual(len(movs), 4)
@@ -55,7 +55,6 @@ class PruebasDados(unittest.TestCase):
         self.assertIsNone(d.ultimo_tiro())
 
     def test_fijar_semilla_reproduce_tirada(self):
-        from backgammon.core.dados import Dados
         d = Dados()
         d.fijar_semilla(5)
         a = d.tirar()
@@ -63,6 +62,23 @@ class PruebasDados(unittest.TestCase):
         b = d.tirar()
         self.assertEqual(a, b)
 
+    def test_ultimo_tiro_cambia_en_cada_tirada(self):
+        d = Dados(semilla=10)
+        r1 = d.tirar()
+        self.assertEqual(d.ultimo_tiro(), r1)
+        r2 = d.tirar()
+        self.assertEqual(d.ultimo_tiro(), r2)
+        self.assertNotEqual(r1, r2)
+
+    def test_cambiar_semilla_cambia_secuencia_y_borra_historial(self):
+        d = Dados()
+        d.fijar_semilla(11)
+        a = d.tirar()
+        d.fijar_semilla(12)
+        self.assertIsNone(d.ultimo_tiro())
+        b = d.tirar()
+        self.assertNotEqual(a, b)
+
+
 if __name__ == "__main__":
     unittest.main()
-

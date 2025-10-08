@@ -149,6 +149,109 @@ class PruebasJuego(unittest.TestCase):
         self.assertEqual(g.jugador_actual.nombre, "A")
         self.assertEqual(g.movimientos_disponibles(), [])
 
+    def test_colocar_ficha_cambia_estado_a_en_curso(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertEqual(g.estado, "inicial")
+        ok = g.colocar_ficha_en(0)
+        self.assertTrue(ok)
+        self.assertEqual(g.estado, "en_curso")
+
+    def test_resumen_estado_y_estado_dict(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(123)
+        d1, d2, movs = g.tirar()
+        snap = g.estado_dict()
+        for k in ("estado", "jugador_actual", "jugador_actual_id",
+                  "movs_restantes", "puntos", "barra", "salidas"):
+            self.assertIn(k, snap)
+        resumen = g.resumen_estado()
+        self.assertIn("estado=", resumen)
+        self.assertIn("movs=", resumen)
+
+    def test_reiniciar_limpia_movs_y_vuelve_a_inicial(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(1)
+        g.tirar()
+        self.assertEqual(g.estado, "en_curso")
+        g.reiniciar()
+        self.assertEqual(g.estado, "inicial")
+        self.assertEqual(g.movimientos_disponibles(), [])
+        self.assertEqual(g.jugador_actual.nombre, "A")
+
+    def test_mover_ficha_consumo_distancia_y_cambio_turno(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)
+        self.assertTrue(ok)
+        self.assertEqual(g.jugador_actual.nombre, "B")
+        self.assertEqual(g.movimientos_disponibles(), [])
+
+    def test_mover_ficha_falla_por_distancia_invalida(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g._Juego__movs_restantes__ = [2]
+        self.assertFalse(g.mover_ficha(0, 3))
+        self.assertEqual(g.movimientos_disponibles(), [2])
+
+    def test_aplicar_movimiento_sin_ficha_no_modifica(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        self.assertFalse(g.aplicar_movimiento(0, 3))
+        self.assertEqual(g.movimientos_disponibles(), [3])
+
+    def test_tablero_property_devuelve_instancia(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertIsNotNone(g.tablero.__class__)
+
+    def test_usar_semilla_y_tirar_cubre_rama(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(1234)                 
+        r1 = g.tirar()
+        g.usar_semilla(1234)
+        r2 = g.tirar()
+        self.assertEqual(r1, r2)
+
+    def test_mover_ficha_consumo_parcial_sin_cambiar_turno(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g._Juego__movs_restantes__ = [3, 2]
+        ok = g.mover_ficha(0, 3)
+        self.assertTrue(ok)
+        self.assertEqual(g.jugador_actual.nombre, "A")   
+        self.assertEqual(g.movimientos_disponibles(), [2])
+        self.assertEqual(g.estado, "en_curso")          
+
+    def test_estado_pasa_a_terminado_cuando_hay_ganador(self):
+        from backgammon.core.tablero import FICHAS_POR_JUGADOR
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.tablero._Tablero__salidas__ = {g.jugador_actual.id: FICHAS_POR_JUGADOR}
+        g.cambiar_turno()                                
+        self.assertEqual(g.estado, "terminado")
+
+    def test_aplicar_movimiento_no_cambia_turno_pero_consumo(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g._Juego__movs_restantes__ = [3, 4]
+        ok = g.aplicar_movimiento(0, 3)                 
+        self.assertTrue(ok)
+        self.assertEqual(g.jugador_actual.nombre, "A")
+        self.assertEqual(g.movimientos_disponibles(), [4])
+
+    def test_reiniciar_cubre_todas_limpiezas(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(7)
+        g.tirar()
+        g.colocar_ficha_en(0)
+        g.reiniciar()
+        self.assertEqual(g.estado, "inicial")
+        self.assertEqual(g.movimientos_disponibles(), [])
+        self.assertEqual(g.jugador_actual.nombre, "A")
+
 
 if __name__ == "__main__":
     unittest.main()
