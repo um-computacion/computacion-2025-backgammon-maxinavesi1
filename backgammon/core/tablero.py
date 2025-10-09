@@ -103,12 +103,25 @@ class Tablero:
         return rival and len(destino) >= 2
 
     def mover_ficha_seguro(self, jugador_id, desde, hasta):
+        """Valida ownership, rangos y bloqueo; mueve si se puede.
+        - Bloqueado: destino con 2+ fichas del rival -> False
+        - Golpe (hit): destino con 1 ficha rival -> la manda a barra y ocupa
+        """
         self.validar_indice_punto(desde)
         self.validar_indice_punto(hasta)
+
         if jugador_id not in self.__puntos__[desde]:
             return False
+
         if self._bloqueado_por_oponente(jugador_id, hasta):
             return False
+
+        destino = self.__puntos__[hasta]
+
+        if destino and destino[0] != jugador_id and len(destino) == 1:
+            rival_id = destino.pop()
+            self.enviar_a_barra(rival_id)
+        
         self.__puntos__[desde].remove(jugador_id)
         self.__puntos__[hasta].append(jugador_id)
         return True
