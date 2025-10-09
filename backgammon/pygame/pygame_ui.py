@@ -9,7 +9,7 @@ Teclas:
 Clicks:
   • Click en un punto para seleccionarlo (origen).
   • Click en otro punto para intentar mover (destino).
-  • Si el movimiento falla, se muestra el motivo (juego.ultimo_error()).
+  • Si el movimiento falla, se muestra un motivo genérico.
 
 Ejecución:
     python -m backgammon.pygame.pygame_ui
@@ -34,14 +34,16 @@ COLOR_TEXTO = (30, 30, 30)
 COLOR_PUNTO = (196, 144, 110)
 COLOR_J1 = (60, 120, 220)
 COLOR_J2 = (220, 120, 60)
-COLOR_SEL = (30, 30, 30)  
+COLOR_SEL = (30, 30, 30)
+COLOR_HINT = (90, 180, 90)
 
-MARGEN = 36     
-Y_SUP = 110      
+MARGEN = 36
+Y_SUP = 110
 Y_INF = ALTO - 110
 RADIO_PUNTO = 9
 RADIO_FICHA = 12
 SEP_FICHA = 5
+
 
 def _col_w() -> int:
     """Ancho de cada columna (12 por fila)."""
@@ -66,20 +68,19 @@ def _punto_desde_xy(x: int, y: int) -> int | None:
     if y < (ALTO // 2):
         fila_sup = True
         base_y = Y_SUP
-        fila_idx_offset = 0
     else:
         fila_sup = False
         base_y = Y_INF
-        fila_idx_offset = 12
 
     if x < MARGEN or x >= (ANCHO - MARGEN):
         return None
-    
+
     col = (x - MARGEN) // colw
     if not (0 <= col <= 11):
         return None
     if abs(y - base_y) > 40:
         return None
+
     if fila_sup:
         idx = col
     else:
@@ -89,7 +90,7 @@ def _punto_desde_xy(x: int, y: int) -> int | None:
 
 def _dibujar_puntos(surface: pygame.Surface, seleccionado: int | None) -> None:
     for i in range(24):
-        x, y, colw, _ = _xy_punto(i)
+        x, y, _, _ = _xy_punto(i)
         pygame.draw.circle(surface, COLOR_PUNTO, (x, y), RADIO_PUNTO)
         if seleccionado == i:
             pygame.draw.circle(surface, COLOR_SEL, (x, y), RADIO_PUNTO + 3, width=2)
@@ -102,11 +103,28 @@ def _dibujar_fichas(surface: pygame.Surface, juego: Juego) -> None:
 
     for i in range(PUNTOS):
         x, y_base, _, dire = _xy_punto(i)
-        pila = t.punto(i) 
+        pila = t.punto(i)
         for n, pid in enumerate(pila):
             dy = (RADIO_FICHA * 2 + SEP_FICHA) * n * dire
             color = COLOR_J1 if pid == j1_id else COLOR_J2
             pygame.draw.circle(surface, color, (x, y_base + dy), RADIO_FICHA)
+
+
+def _dibujar_hints(surface: pygame.Surface, origen: int | None, movs: list[int]) -> None:
+    """Dibuja pistas (puntitos) en destinos posibles desde 'origen' según 'movs'."""
+    if origen is None or not movs:
+        return
+    posibles = set()
+    for d in movs:
+        a = origen + d
+        b = origen - d
+        if 0 <= a < PUNTOS:
+            posibles.add(a)
+        if 0 <= b < PUNTOS:
+            posibles.add(b)
+    for idx in posibles:
+        x, y, _, _ = _xy_punto(idx)
+        pygame.draw.circle(surface, COLOR_HINT, (x, y), RADIO_PUNTO // 2)
 
 
 def _demo_reset(juego: Juego) -> None:
@@ -172,16 +190,26 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
                     if seleccionado is None:
                         seleccionado = idx
                     else:
-                        ok = juego.mover_ficha(seleccionado, idx)
-                        if ok:
-                            msg = f"Movimiento {seleccionado}→{idx} OK. Restantes: {juego.movimientos_disponibles()}"
+                        if idx == seleccionado:
                             seleccionado = None
                         else:
-                            msg = f"NO se pudo mover {seleccionado}→{idx}: {juego.ultimo_error()}"
-                        ultimo_txt = f20.render(msg, True, COLOR_TEXTO)
+                            ok = juego.mover_ficha(seleccionado, idx)
+                            if ok:
+                                msg = (
+                                    f"Movimiento {seleccionado}→{idx} OK. "
+                                    f"Restantes: {juego.movimientos_disponibles()}"
+                                )
+                                seleccionado = None
+                            else:
+                                msg = (
+                                    f"NO se pudo mover {seleccionado}→{idx}. "
+                                    "Motivo genérico: distancia no disponible o sin ficha en origen."
+                                )
+                            ultimo_txt = f20.render(msg, True, COLOR_TEXTO)
 
         screen.fill(COLOR_FONDO)
         _dibujar_puntos(screen, seleccionado)
+        _dibujar_hints(screen, seleccionado, juego.movimientos_disponibles())
         _dibujar_fichas(screen, juego)
 
         estado = (
