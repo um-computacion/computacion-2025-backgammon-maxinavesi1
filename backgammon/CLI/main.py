@@ -2,6 +2,24 @@ import sys
 from backgammon.core.juego import Juego
 from backgammon.core.jugador import Jugador
 
+from backgammon.core.tablero import PUNTOS
+
+def _razon_no_mover(juego, desde, hasta):
+    """Devuelve un string con el motivo del fallo al mover."""
+    pid = juego.jugador_actual.id
+    if not (0 <= desde < PUNTOS) or not (0 <= hasta < PUNTOS):
+        return f"índices fuera de rango (0..{PUNTOS-1})"
+    dist = abs(hasta - desde)
+    movs = juego.movimientos_disponibles()
+    if dist not in movs:
+        return f"la distancia {dist} no está en movs {movs}"
+    if pid not in juego.tablero.punto(desde):
+        return f"no hay ficha tuya en el punto {desde}"
+    if juego.tablero._bloqueado_por_oponente(pid, hasta):
+        return f"destino {hasta} bloqueado por el oponente"
+    return "movimiento inválido"
+
+
 def _ayuda():
     """Muestra ayuda simple de la CLI."""
     print("Backgammon CLI")
@@ -73,7 +91,10 @@ def main():
             except ValueError:
                 print("Parámetros inválidos. Ej: --mover 0 3"); return
             ok = juego.mover_ficha(desde, hasta)
-            print("Movimiento:", "OK" if ok else "NO se pudo")
+            if ok:
+                print("Movimiento: OK")
+            else:
+                print("Movimiento: NO se pudo —", _razon_no_mover(juego, desde, hasta))
             print("Movs restantes:", juego.movimientos_disponibles())
             i += 3
             continue
@@ -97,37 +118,18 @@ def main():
                 print("salidas:", est["salidas"])
             i += 1
             continue
+        
         if cmd == "--demo":
-            juego.reiniciar()  
+            juego.reiniciar()
             pid_a = juego.jugador_actual.id
-            pid_b = juego._Juego__jugadores__[1].id
-            juego._Juego__tablero__.colocar_ficha(pid_a, 0)
-            juego._Juego__tablero__.colocar_ficha(pid_a, 0)
-            juego._Juego__tablero__.colocar_ficha(pid_b, 23)
-            juego._Juego__tablero__.colocar_ficha(pid_b, 23)
-
+            pid_b = j2.id             
+            juego.tablero.colocar_ficha(pid_a, 0)
+            juego.tablero.colocar_ficha(pid_a, 0)
+            juego.tablero.colocar_ficha(pid_b, 23)
+            juego.tablero.colocar_ficha(pid_b, 23)
             print("Demo: [A,A] en 0 y [B,B] en 23 (posición de práctica)")
             i += 1
             continue
-
-        if cmd == "--poner" and len(args) >= 2:
-            ok = juego.colocar_ficha_en(p)
-            if ok:
-                print(f"Se colocó una ficha en el punto {p} para {juego.jugador_actual.nombre}")
-            else:
-                print("Error:", juego.ultimo_error())
-            return
-
-        if cmd == "--mover" and len(args) >= 3:
-            ok = juego.mover_ficha(desde, hasta)
-            if ok:
-                print("Movimiento: OK")
-            else:
-                print("Movimiento: no se pudo")
-                print("Motivo:", juego.ultimo_error())
-            print("Movs restantes:", juego.movimientos_disponibles())
-            return
-
 
         print("Comando no reconocido:", cmd)
         _ayuda()
