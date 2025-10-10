@@ -16,17 +16,22 @@ class Tablero:
             super().__setattr__("__barra__", value)
             super().__setattr__(name, value)
             return
+        if name == "_Tablero__Tablero__":
+            super().__setattr__("__barra__", value)
+            super().__setattr__(name, value)
+            return
         super().__setattr__(name, value)
+
+    def _sync_aliases(self):
+        super().__setattr__("_Tablero__salidas__", self.__salidas__)
+        super().__setattr__("_Tablero__barra__", self.__barra__)
+        super().__setattr__("_Tablero__Tablero__", self.__barra__)
 
     def __init__(self):
         self.__puntos__ = [[] for _ in range(PUNTOS)]
         self.__salidas__ = {}
         self.__barra__ = {}
         self._sync_aliases()
-
-    def _sync_aliases(self):
-        super().__setattr__("_Tablero__salidas__", self.__salidas__)
-        super().__setattr__("_Tablero__barra__", self.__barra__)
 
     def preparar_posicion_inicial(self):
         """Deja el tablero en estado inicial VACÍO (los tests colocan fichas)."""
@@ -103,8 +108,6 @@ class Tablero:
         return rival and len(destino) >= 2
 
     def mover_ficha_seguro(self, jugador_id, desde, hasta):
-        """Valida ownership, rangos y bloqueo; mueve si se puede.
-        """
         self.validar_indice_punto(desde)
         self.validar_indice_punto(hasta)
 
@@ -117,9 +120,9 @@ class Tablero:
         destino = self.__puntos__[hasta]
 
         if destino and destino[0] != jugador_id and len(destino) == 1:
-            rival_id = destino.pop()
-            self.enviar_a_barra(rival_id)
-        
+            rival_id = destino.pop(0)    
+            self.enviar_a_barra(rival_id) 
+
         self.__puntos__[desde].remove(jugador_id)
         self.__puntos__[hasta].append(jugador_id)
         return True
