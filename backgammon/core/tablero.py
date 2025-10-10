@@ -104,8 +104,6 @@ class Tablero:
 
     def mover_ficha_seguro(self, jugador_id, desde, hasta):
         """Valida ownership, rangos y bloqueo; mueve si se puede.
-        - Bloqueado: destino con 2+ fichas del rival -> False
-        - Golpe (hit): destino con 1 ficha rival -> la manda a barra y ocupa
         """
         self.validar_indice_punto(desde)
         self.validar_indice_punto(hasta)
