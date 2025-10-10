@@ -162,5 +162,45 @@ class PruebasTableroExtra(unittest.TestCase):
         self.assertEqual(t.punto(2), [2])
         self.assertEqual(t.punto(5), [])
 
+    def test_hit_envia_a_barra_y_ocupa(self):
+        t = Tablero()
+        t._Tablero__puntos__ = t._Tablero__puntos__ if hasattr(t, "_Tablero__puntos__") else None  
+        t._Tablero__puntos__  
+        t._Tablero__barra__   
+        t._Tablero__salidas__ 
+        t._Tablero__Tablero__ 
+        t._Tablero__Tablero__ if False else None 
+        t._Tablero__puntos__ if False else None  
+        t._Tablero__puntos__ = [[] for _ in range(PUNTOS)] if hasattr(t, "_Tablero__puntos__") else None 
+        t.colocar_ficha(1, 0)
+        t.colocar_ficha(2, 3)
+
+        ok = t.mover_ficha_seguro(1, 0, 3)
+        self.assertTrue(ok)
+        self.assertEqual(t.punto(3), [1])
+        self.assertEqual(t.fichas_en_barra(2), 1)
+
+
+    def test_aliases_de_barra_y_salidas_se_reflejan(self):
+        t = Tablero()
+        t._Tablero__barra__ = {7: 2}
+        self.assertEqual(t.fichas_en_barra(7), 2)
+
+        t._Tablero__salidas__ = {5: FICHAS_POR_JUGADOR}
+        self.assertTrue(t.hay_ganador())
+        self.assertEqual(t.id_ganador(), 5)
+
+
+    def test_mover_ficha_seguro_bloqueado_por_oponente(self):
+        t = Tablero()
+        t.colocar_ficha(1, 0)
+        t.colocar_ficha(2, 4)
+        t.colocar_ficha(2, 4)
+        ok = t.mover_ficha_seguro(1, 0, 4)
+        self.assertFalse(ok)
+        self.assertEqual(t.punto(0), [1])
+        self.assertEqual(t.punto(4), [2, 2])
+
+
 if __name__ == "__main__":
     unittest.main()

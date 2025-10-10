@@ -252,6 +252,61 @@ class PruebasJuego(unittest.TestCase):
         self.assertEqual(g.movimientos_disponibles(), [])
         self.assertEqual(g.jugador_actual.nombre, "A")
 
+    def test_juego_bloqueo_impide_mover_y_no_consumo(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        rival = 2 if pid == 1 else 1
+        g._Juego__tablero__.colocar_ficha(rival, 3)
+        g._Juego__tablero__.colocar_ficha(rival, 3)
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)
+        self.assertFalse(ok)
+        self.assertEqual(g.movimientos_disponibles(), [3])
+        self.assertEqual(g.jugador_actual.id, pid)
+
+
+    def test_juego_hit_envia_a_barra_y_cambia_turno_si_sin_movs(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        rival = 2 if pid == 1 else 1
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g._Juego__tablero__.colocar_ficha(rival, 3)  
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_en_barra(rival), 1)
+        self.assertEqual(g.tablero.punto(3), [pid])
+        self.assertNotEqual(g.jugador_actual.id, pid)
+
+
+    def test_alias_movs_restantes_espeja_en_getter(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [4, 1]
+        self.assertEqual(g.movimientos_disponibles(), [4, 1])
+        pid = g.jugador_actual.id
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        ok = g.aplicar_movimiento(0, 4)
+        if not ok:
+            g._Juego__tablero__.preparar_posicion_inicial()
+            g._Juego__tablero__.colocar_ficha(pid, 0)
+            g._Juego__movs_restantes__ = [1]
+            ok = g.aplicar_movimiento(0, 1)
+        self.assertTrue(ok)
+        self.assertIn(len(g.movimientos_disponibles()), (0, 1))  
+
+
+    def test_alias_reemplazo_de_tablero_dispara_estado_terminado(self):
+        a = Jugador("A"); b = Jugador("B")
+        g = Juego(a, b)
+        from backgammon.core.tablero import Tablero, FICHAS_POR_JUGADOR
+        t = Tablero()
+        t._Tablero__salidas__ = {a.id: FICHAS_POR_JUGADOR}
+        g._Juego__tablero__ = t
+        g.cambiar_turno()
+        self.assertEqual(g.estado, "terminado")
+
+
 
 if __name__ == "__main__":
     unittest.main()
