@@ -1,7 +1,6 @@
-
 from backgammon.core.tablero import Tablero, PUNTOS
 from backgammon.core.dados import Dados
-from backgammon.core.jugador import Jugador  
+from backgammon.core.jugador import Jugador 
 
 class Juego:
     """Coordina el estado del juego, los dados y el turno actual."""
@@ -23,9 +22,9 @@ class Juego:
         self.__dados__ = Dados()
         self.__indice_jugador_actual__ = 0 if indice_inicial not in (0, 1) else indice_inicial
         self.__barra__ = {jugador1.id: 0, jugador2.id: 0}
-
         self.__estado__ = "inicial"
         self.__movs_restantes__ = []
+        self.__ultimo_error__ = None
 
         self._sync_aliases()
 
@@ -45,6 +44,12 @@ class Juego:
     def jugador_actual(self):
         return self.__jugadores__[self.__indice_jugador_actual__]
 
+    def ultimo_error(self):
+        return self.__ultimo_error__
+
+    def _set_error(self, msg=None):
+        self.__ultimo_error__ = msg
+
     def usar_semilla(self, semilla: int):
         self.__dados__.fijar_semilla(semilla)
 
@@ -54,58 +59,73 @@ class Juego:
         self._sync_aliases()
         if self.__estado__ == "inicial":
             self.__estado__ = "en_curso"
+        self._set_error(None)
         self._actualizar_estado()
         return d1, d2, movimientos
 
     def movimientos_disponibles(self):
         return list(self.__movs_restantes__)
 
-    def aplicar_movimiento(self, desde: int, hasta: int) -> bool:
-        """Mueve una ficha del jugador actual si la distancia está disponible.
-        No cambia el turno; sólo consume la distancia si el movimiento ocurre.
-        Usa validación de tablero (seguro)."""
+    def _validar_movimiento(self, desde: int, hasta: int) -> tuple[bool, int]:
+        if not (0 <= desde < PUNTOS) or not (0 <= hasta < PUNTOS):
+            self._set_error(f"índices fuera de rango (0..{PUNTOS-1})")
+            return False, 0
         distancia = abs(hasta - desde)
         if distancia not in self.__movs_restantes__:
-            return False
-
+            self._set_error(f"la distancia {distancia} no está en movs {self.__movs_restantes__}")
+            return False, distancia
         pid = self.jugador_actual.id
-        ok = self.__tablero__.mover_ficha_seguro(pid, desde, hasta)
+        if pid not in self.__tablero__.punto(desde):
+            self._set_error("no hay ficha del jugador en el origen")
+            return False, distancia
+        if self.__tablero__._bloqueado_por_oponente(pid, hasta):
+            self._set_error("destino bloqueado por el oponente")
+            return False, distancia
+        self._set_error(None)
+        return True, distancia
+
+    def aplicar_movimiento(self, desde: int, hasta: int) -> bool:
+        ok_pre, distancia = self._validar_movimiento(desde, hasta)
+        if not ok_pre:
+            return False
+        ok = self.__tablero__.mover_ficha_seguro(self.jugador_actual.id, desde, hasta)
         if ok:
             self.__movs_restantes__.remove(distancia)
+            self._set_error(None)
+        else:
+            self._set_error("movimiento inválido")
         return ok
 
-
     def mover_ficha(self, desde: int, hasta: int) -> bool:
-        """Mueve una ficha si la distancia está en los movimientos restantes.
-        """
-        pid = self.jugador_actual.id
-        distancia = abs(hasta - desde)
-        if distancia not in self.__movs_restantes__:
+        ok_pre, distancia = self._validar_movimiento(desde, hasta)
+        if not ok_pre:
             return False
-
+        pid = self.jugador_actual.id
         ok = self.__tablero__.mover_ficha_seguro(pid, desde, hasta)
         if not ok:
+            self._set_error("movimiento inválido")
             return False
-
         self.__movs_restantes__.remove(distancia)
+        self._set_error(None)
         if not self.__movs_restantes__:
             self.cambiar_turno()
         else:
             self._actualizar_estado()
         return True
 
-
     def colocar_ficha_en(self, punto: int) -> bool:
         pid = self.jugador_actual.id
         ok = self.__tablero__.colocar_ficha(pid, punto)
         if ok and self.__estado__ == "inicial":
             self.__estado__ = "en_curso"
+        self._set_error(None if ok else "no se pudo colocar ficha")
         self._actualizar_estado()
         return ok
 
     def cambiar_turno(self):
         self.__indice_jugador_actual__ = 1 - self.__indice_jugador_actual__
         self.__movs_restantes__.clear()
+        self._set_error(None)
         self._actualizar_estado()
 
     def termino(self) -> bool:
@@ -144,6 +164,7 @@ class Juego:
         self.__movs_restantes__.clear()
         self.__indice_jugador_actual__ = 0
         self.__estado__ = "inicial"
+        self._set_error(None)
         self._actualizar_estado()
 
     def _actualizar_estado(self):

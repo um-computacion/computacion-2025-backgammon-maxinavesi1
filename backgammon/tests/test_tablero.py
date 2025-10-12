@@ -18,7 +18,7 @@ class PruebasTablero(unittest.TestCase):
         t = Tablero()
         self.assertIsInstance(t.punto(PUNTOS - 1), list)
 
-    def test_indice_negativo(self):
+    def test_indice_neativo(self):
         t = Tablero()
         with self.assertRaises(ValueError):
             t.punto(-1)
@@ -201,6 +201,25 @@ class PruebasTableroExtra(unittest.TestCase):
         self.assertEqual(t.punto(0), [1])
         self.assertEqual(t.punto(4), [2, 2])
 
+    def test_mover_ficha_indices_fuera_de_rango_error_en_juego(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(-1, 2)  
+        assert not ok and "fuera de rango" in (g.ultimo_error() or "")
+
+    def test_mover_ficha_indices_fuera_de_rango_error_en_juego(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(-1, 2)
+        assert not ok and "fuera de rango" in (g.ultimo_error() or "")
+
+    def test_mover_ficha_seguro_exitoso_desde_juego(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)
+        assert ok and g.jugador_actual.nombre == "B"
 
 if __name__ == "__main__":
     unittest.main()

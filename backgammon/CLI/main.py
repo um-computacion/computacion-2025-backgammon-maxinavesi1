@@ -4,20 +4,6 @@ from backgammon.core.jugador import Jugador
 
 from backgammon.core.tablero import PUNTOS
 
-def _razon_no_mover(juego, desde, hasta):
-    """Devuelve un string con el motivo del fallo al mover."""
-    pid = juego.jugador_actual.id
-    if not (0 <= desde < PUNTOS) or not (0 <= hasta < PUNTOS):
-        return f"índices fuera de rango (0..{PUNTOS-1})"
-    dist = abs(hasta - desde)
-    movs = juego.movimientos_disponibles()
-    if dist not in movs:
-        return f"la distancia {dist} no está en movs {movs}"
-    if pid not in juego.tablero.punto(desde):
-        return f"no hay ficha tuya en el punto {desde}"
-    if juego.tablero._bloqueado_por_oponente(pid, hasta):
-        return f"destino {hasta} bloqueado por el oponente"
-    return "movimiento inválido"
 
 
 def _ayuda():
@@ -94,10 +80,12 @@ def main():
             if ok:
                 print("Movimiento: OK")
             else:
-                print("Movimiento: NO se pudo —", _razon_no_mover(juego, desde, hasta))
+                motivo = juego.ultimo_error() or "movimiento inválido"
+                print("Movimiento: NO se pudo —", motivo)
             print("Movs restantes:", juego.movimientos_disponibles())
             i += 3
             continue
+
 
         if cmd == "--estado":
             print(juego.resumen_estado())

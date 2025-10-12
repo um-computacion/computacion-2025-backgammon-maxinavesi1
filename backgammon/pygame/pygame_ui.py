@@ -203,7 +203,7 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
                             else:
                                 msg = (
                                     f"NO se pudo mover {seleccionado}→{idx}. "
-                                    "Motivo genérico: distancia no disponible o sin ficha en origen."
+                                    f"Motivo: {juego.ultimo_error() or 'movimiento inválido'}"
                                 )
                             ultimo_txt = f20.render(msg, True, COLOR_TEXTO)
 
