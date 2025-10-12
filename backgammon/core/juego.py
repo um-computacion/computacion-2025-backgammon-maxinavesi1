@@ -23,11 +23,15 @@ class Juego:
         self.__dados__ = Dados()
         self.__indice_jugador_actual__ = 0 if indice_inicial not in (0, 1) else indice_inicial
         self.__barra__ = {jugador1.id: 0, jugador2.id: 0}
-
+        self.__ultimo_error__ = None
         self.__estado__ = "inicial"
         self.__movs_restantes__ = []
 
         self._sync_aliases()
+    
+    def ultimo_error(self):
+        """Devuelve el último motivo de error o None."""
+        return self.__ultimo_error__
 
     def _sync_aliases(self):
         super().__setattr__("_Juego__tablero__", self.__tablero__)
@@ -49,6 +53,7 @@ class Juego:
         self.__dados__.fijar_semilla(semilla)
 
     def tirar(self):
+        self.__ultimo_error__ = None
         d1, d2, movimientos = self.__dados__.tirar()
         self.__movs_restantes__ = list(movimientos)
         self._sync_aliases()
@@ -61,30 +66,48 @@ class Juego:
         return list(self.__movs_restantes__)
 
     def aplicar_movimiento(self, desde: int, hasta: int) -> bool:
-        """Mueve una ficha del jugador actual si la distancia está disponible.
-        No cambia el turno; sólo consume la distancia si el movimiento ocurre.
-        Usa validación de tablero (seguro)."""
+        self.__ultimo_error__ = None
         distancia = abs(hasta - desde)
         if distancia not in self.__movs_restantes__:
+            self.__ultimo_error__ = f"la distancia {distancia} no está en movs {self.__movs_restantes__}"
             return False
-
-        pid = self.jugador_actual.id
-        ok = self.__tablero__.mover_ficha_seguro(pid, desde, hasta)
-        if ok:
-            self.__movs_restantes__.remove(distancia)
-        return ok
+        try:
+            ok = self.__tablero__.mover_ficha_seguro(self.jugador_actual.id, desde, hasta)
+        except ValueError:
+            self.__ultimo_error__ = f"índices fuera de rango (0..{PUNTOS-1})"
+            return False
+        if not ok:
+            pid = self.jugador_actual.id
+            if pid not in self.__tablero__.punto(desde):
+                self.__ultimo_error__ = f"no hay ficha propia en {desde}"
+            elif self.__tablero__._bloqueado_por_oponente(pid, hasta):
+                self.__ultimo_error__ = f"destino {hasta} bloqueado por el oponente"
+            else:
+                self.__ultimo_error__ = "movimiento inválido"
+            return False
+        self.__movs_restantes__.remove(distancia)
+        return True
 
 
     def mover_ficha(self, desde: int, hasta: int) -> bool:
-        """Mueve una ficha si la distancia está en los movimientos restantes.
-        """
+        self.__ultimo_error__ = None
         pid = self.jugador_actual.id
         distancia = abs(hasta - desde)
         if distancia not in self.__movs_restantes__:
+            self.__ultimo_error__ = f"la distancia {distancia} no está en movs {self.__movs_restantes__}"
             return False
-
-        ok = self.__tablero__.mover_ficha_seguro(pid, desde, hasta)
+        try:
+            ok = self.__tablero__.mover_ficha_seguro(pid, desde, hasta)  
+        except ValueError:
+            self.__ultimo_error__ = f"índices fuera de rango (0..{PUNTOS-1})"
+            return False
         if not ok:
+            if pid not in self.__tablero__.punto(desde):
+                self.__ultimo_error__ = f"no hay ficha propia en {desde}"
+            elif self.__tablero__._bloqueado_por_oponente(pid, hasta):
+                self.__ultimo_error__ = f"destino {hasta} bloqueado por el oponente"
+            else:
+                self.__ultimo_error__ = "movimiento inválido"
             return False
 
         self.__movs_restantes__.remove(distancia)
@@ -96,6 +119,7 @@ class Juego:
 
 
     def colocar_ficha_en(self, punto: int) -> bool:
+        self.__ultimo_error__ = None
         pid = self.jugador_actual.id
         ok = self.__tablero__.colocar_ficha(pid, punto)
         if ok and self.__estado__ == "inicial":
