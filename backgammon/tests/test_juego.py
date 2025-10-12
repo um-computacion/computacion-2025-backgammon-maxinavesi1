@@ -306,7 +306,89 @@ class PruebasJuego(unittest.TestCase):
         g.cambiar_turno()
         self.assertEqual(g.estado, "terminado")
 
+    def test_mover_ficha_falla_por_bloqueo_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        rival = 2 if pid == 1 else 1
+        g._Juego__tablero__._Tablero__puntos__ = g._Juego__tablero__._Tablero__puntos__
+        g._Juego__tablero__._Tablero__puntos__[4] = [rival, rival]
+        g._Juego__movs_restantes__ = [4]
+        ok = g.mover_ficha(0, 4)
+        self.assertFalse(ok)
+        self.assertIn("bloqueado", g.ultimo_error() or "")
 
+    def test_mover_ficha_distancia_no_disponible_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 2)  
+        self.assertFalse(ok)
+        self.assertIn("distancia 2", g.ultimo_error() or "")
+
+    def test_aplicar_mov_distancia_no_disponible_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        ok = g.aplicar_movimiento(0, 2)  
+        self.assertFalse(ok)
+        self.assertIn("distancia 2", g.ultimo_error() or "")
+
+    def test_aplicar_mov_indices_fuera_de_rango_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        ok = g.aplicar_movimiento(-1, 2) 
+        self.assertFalse(ok)
+        self.assertIn("fuera de rango", g.ultimo_error() or "")
+
+    def test_aplicar_mov_sin_ficha_en_origen_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        ok = g.aplicar_movimiento(0, 3)  
+        self.assertFalse(ok)
+        self.assertIn("no hay ficha", g.ultimo_error() or "")
+
+    def test_aplicar_mov_bloqueado_por_oponente_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        rival = 2 if pid == 1 else 1
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g._Juego__tablero__._Tablero__puntos__[4] = [rival, rival]
+        g._Juego__movs_restantes__ = [4]
+        ok = g.aplicar_movimiento(0, 4)
+        self.assertFalse(ok)
+        self.assertIn("bloqueado", g.ultimo_error() or "")
+
+    def test_mover_indices_fuera_de_rango_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 99)
+        self.assertFalse(ok)
+        self.assertIn("fuera de rango", g.ultimo_error() or "")
+
+    def test_mover_sin_ficha_en_origen_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)
+        self.assertFalse(ok)
+        self.assertIn("no hay ficha", g.ultimo_error() or "")
+
+    def test_mover_bloqueado_por_oponente_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        rival = 2 if pid == 1 else 1
+        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g._Juego__tablero__._Tablero__puntos__[4] = [rival, rival]
+        g._Juego__movs_restantes__ = [4]
+        ok = g.mover_ficha(0, 4)
+        self.assertFalse(ok)
+        self.assertIn("bloqueado", g.ultimo_error() or "")
+
+    def test_tirar_limpia_ultimo_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g._Juego__movs_restantes__ = [3]
+        _ = g.mover_ficha(0, 2)  
+        self.assertIsNotNone(g.ultimo_error())
+        g.tirar()
+        self.assertIsNone(g.ultimo_error())
 
 if __name__ == "__main__":
     unittest.main()

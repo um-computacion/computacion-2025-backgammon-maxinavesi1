@@ -21,11 +21,17 @@ class Tablero:
             super().__setattr__(name, value)
             return
         super().__setattr__(name, value)
+        if name == "_Tablero__puntos__":
+            super().__setattr__("__puntos__", value)
+            super().__setattr__(name, value)
+            return
+        super().__setattr__(name, value)
 
     def _sync_aliases(self):
         super().__setattr__("_Tablero__salidas__", self.__salidas__)
         super().__setattr__("_Tablero__barra__", self.__barra__)
         super().__setattr__("_Tablero__Tablero__", self.__barra__)
+        super().__setattr__("_Tablero__puntos__", self.__puntos__)
 
     def __init__(self):
         self.__puntos__ = [[] for _ in range(PUNTOS)]
