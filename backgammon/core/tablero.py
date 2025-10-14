@@ -132,3 +132,24 @@ class Tablero:
         self.__puntos__[desde].remove(jugador_id)
         self.__puntos__[hasta].append(jugador_id)
         return True
+    
+    def reingresar_desde_barra(self, jugador_id: int, hasta: int) -> bool:
+            
+        """ Si el jugador tiene fichas en barra, intenta reingresar una ficha a `hasta`.
+        """
+        self.validar_indice_punto(hasta)
+        if self.fichas_en_barra(jugador_id) <= 0:
+            return False
+
+        if self._bloqueado_por_oponente(jugador_id, hasta):
+            return False
+
+        destino = self.__puntos__[hasta]
+
+        if destino and destino[0] != jugador_id and len(destino) == 1:
+            rival_id = destino.pop(0)
+            self.enviar_a_barra(rival_id)
+
+        self.__barra__[jugador_id] = self.fichas_en_barra(jugador_id) - 1
+        self.__puntos__[hasta].append(jugador_id)
+        return True
