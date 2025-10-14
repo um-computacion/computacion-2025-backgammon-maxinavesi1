@@ -2,7 +2,6 @@ import sys
 from backgammon.core.juego import Juego
 from backgammon.core.jugador import Jugador
 
-from backgammon.core.tablero import PUNTOS
 
 
 
@@ -76,6 +75,7 @@ def main():
                 desde = int(args[i + 1]); hasta = int(args[i + 2])
             except ValueError:
                 print("Parámetros inválidos. Ej: --mover 0 3"); return
+            
             ok = juego.mover_ficha(desde, hasta)
             if ok:
                 print("Movimiento: OK")
