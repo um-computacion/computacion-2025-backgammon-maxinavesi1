@@ -67,28 +67,47 @@ class Juego:
         return list(self.__movs_restantes__)
 
     def _validar_movimiento(self, desde: int, hasta: int) -> tuple[bool, int]:
+        pid = self.jugador_actual.id
+
         if not (0 <= desde < PUNTOS) or not (0 <= hasta < PUNTOS):
             self._set_error(f"índices fuera de rango (0..{PUNTOS-1})")
             return False, 0
-        distancia = abs(hasta - desde)
+
+        entrada = self._entrada_para(pid)
+        if self._en_barra(pid) and desde != entrada:
+            self._set_error("tenés fichas en la barra: reingresá primero")
+            return False, 0
+
+        distancia = abs(hasta - desde if not self._en_barra(pid) else hasta - entrada)
+        distancia = abs(distancia)
+
         if distancia not in self.__movs_restantes__:
             self._set_error(f"la distancia {distancia} no está en movs {self.__movs_restantes__}")
             return False, distancia
-        pid = self.jugador_actual.id
-        if pid not in self.__tablero__.punto(desde):
-            self._set_error("no hay ficha del jugador en el origen")
-            return False, distancia
-        if self.__tablero__._bloqueado_por_oponente(pid, hasta):
-            self._set_error("destino bloqueado por el oponente")
-            return False, distancia
+
+        if not self._en_barra(pid):
+            if pid not in self.__tablero__.punto(desde):
+                self._set_error("no hay ficha del jugador en el origen")
+                return False, distancia
+            if self.__tablero__._bloqueado_por_oponente(pid, hasta):
+                self._set_error("destino bloqueado por el oponente")
+                return False, distancia
+
         self._set_error(None)
         return True, distancia
+
 
     def aplicar_movimiento(self, desde: int, hasta: int) -> bool:
         ok_pre, distancia = self._validar_movimiento(desde, hasta)
         if not ok_pre:
             return False
-        ok = self.__tablero__.mover_ficha_seguro(self.jugador_actual.id, desde, hasta)
+
+        pid = self.jugador_actual.id
+        if self._en_barra(pid):
+            ok = self.__tablero__.reingresar_desde_barra(pid, hasta)
+        else:
+            ok = self.__tablero__.mover_ficha_seguro(pid, desde, hasta)
+
         if ok:
             self.__movs_restantes__.remove(distancia)
             self._set_error(None)
@@ -96,15 +115,22 @@ class Juego:
             self._set_error("movimiento inválido")
         return ok
 
+
     def mover_ficha(self, desde: int, hasta: int) -> bool:
         ok_pre, distancia = self._validar_movimiento(desde, hasta)
         if not ok_pre:
             return False
+
         pid = self.jugador_actual.id
-        ok = self.__tablero__.mover_ficha_seguro(pid, desde, hasta)
+        if self._en_barra(pid):
+            ok = self.__tablero__.reingresar_desde_barra(pid, hasta)
+        else:
+            ok = self.__tablero__.mover_ficha_seguro(pid, desde, hasta)
+
         if not ok:
             self._set_error("movimiento inválido")
             return False
+
         self.__movs_restantes__.remove(distancia)
         self._set_error(None)
         if not self.__movs_restantes__:
@@ -112,6 +138,7 @@ class Juego:
         else:
             self._actualizar_estado()
         return True
+
 
     def colocar_ficha_en(self, punto: int) -> bool:
         pid = self.jugador_actual.id
@@ -173,3 +200,11 @@ class Juego:
         else:
             if self.__movs_restantes__:
                 self.__estado__ = "en_curso"
+    
+    def _entrada_para(self, pid: int) -> int:
+        j1_id = self.__jugadores__[0].id
+        return 0 if pid == j1_id else 23
+
+    def _en_barra(self, pid: int) -> bool:
+        return self.__tablero__.fichas_en_barra(pid) > 0
+

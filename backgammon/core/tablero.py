@@ -16,13 +16,12 @@ class Tablero:
             super().__setattr__("__barra__", value)
             super().__setattr__(name, value)
             return
-        if name == "_Tablero__Tablero__":
-            super().__setattr__("__barra__", value)
-            super().__setattr__(name, value)
-            return
-        super().__setattr__(name, value)
         if name == "_Tablero__puntos__":
             super().__setattr__("__puntos__", value)
+            super().__setattr__(name, value)
+            return
+        if name == "_Tablero__Tablero__":
+            super().__setattr__("__barra__", value)
             super().__setattr__(name, value)
             return
         super().__setattr__(name, value)
@@ -30,8 +29,9 @@ class Tablero:
     def _sync_aliases(self):
         super().__setattr__("_Tablero__salidas__", self.__salidas__)
         super().__setattr__("_Tablero__barra__", self.__barra__)
-        super().__setattr__("_Tablero__Tablero__", self.__barra__)
         super().__setattr__("_Tablero__puntos__", self.__puntos__)
+        super().__setattr__("_Tablero__Tablero__", self.__barra__)
+
 
     def __init__(self):
         self.__puntos__ = [[] for _ in range(PUNTOS)]
@@ -130,5 +130,26 @@ class Tablero:
             self.enviar_a_barra(rival_id) 
 
         self.__puntos__[desde].remove(jugador_id)
+        self.__puntos__[hasta].append(jugador_id)
+        return True
+    
+    def reingresar_desde_barra(self, jugador_id: int, hasta: int) -> bool:
+            
+        """ Si el jugador tiene fichas en barra, intenta reingresar una ficha a `hasta`.
+        """
+        self.validar_indice_punto(hasta)
+        if self.fichas_en_barra(jugador_id) <= 0:
+            return False
+
+        if self._bloqueado_por_oponente(jugador_id, hasta):
+            return False
+
+        destino = self.__puntos__[hasta]
+
+        if destino and destino[0] != jugador_id and len(destino) == 1:
+            rival_id = destino.pop(0)
+            self.enviar_a_barra(rival_id)
+
+        self.__barra__[jugador_id] = self.fichas_en_barra(jugador_id) - 1
         self.__puntos__[hasta].append(jugador_id)
         return True

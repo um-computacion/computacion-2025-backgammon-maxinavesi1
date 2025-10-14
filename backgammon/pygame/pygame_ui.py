@@ -193,6 +193,12 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
                         if idx == seleccionado:
                             seleccionado = None
                         else:
+                            if not juego.movimientos_disponibles():
+                                msg = "No hay movimientos: presioná T para tirar los dados."
+                                ultimo_txt = f20.render(msg, True, COLOR_TEXTO)
+                                seleccionado = None
+                                continue
+
                             ok = juego.mover_ficha(seleccionado, idx)
                             if ok:
                                 msg = (
