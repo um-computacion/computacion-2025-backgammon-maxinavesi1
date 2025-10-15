@@ -220,6 +220,27 @@ class PruebasTableroExtra(unittest.TestCase):
         g._Juego__movs_restantes__ = [3]
         ok = g.mover_ficha(0, 3)
         assert ok and g.jugador_actual.nombre == "B"
+    def test_reingresar_desde_barra_falla_si_bloqueado(self):
+        t = Tablero()
+        pid = 1
+        rival = 2
+        t.enviar_a_barra(pid)
+        t._Tablero__puntos__[4] = [rival, rival]
+        self.assertFalse(t.reingresar_desde_barra(pid, 4))
+        self.assertEqual(t.fichas_en_barra(pid), 1)
+
+    def test_reingresar_desde_barra_hit_si_una_rival(self):
+        t = Tablero()
+        pid = 1
+        rival = 2
+        t.enviar_a_barra(pid)
+        t._Tablero__puntos__[5] = [rival]  
+        ok = t.reingresar_desde_barra(pid, 5)
+        self.assertTrue(ok)
+        self.assertEqual(t.fichas_en_barra(pid), 0)
+        self.assertEqual(t.punto(5), [pid])     
+        self.assertEqual(t.fichas_en_barra(rival), 1)  
+
 
 if __name__ == "__main__":
     unittest.main()
