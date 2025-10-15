@@ -43,6 +43,10 @@ class Juego:
     @property
     def jugador_actual(self):
         return self.__jugadores__[self.__indice_jugador_actual__]
+    
+    @property
+    def jugadores(self):
+        return self.__jugadores__
 
     def ultimo_error(self):
         return self.__ultimo_error__
