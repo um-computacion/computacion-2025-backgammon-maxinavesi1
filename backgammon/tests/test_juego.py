@@ -389,6 +389,27 @@ class PruebasJuego(unittest.TestCase):
         self.assertIsNotNone(g.ultimo_error())
         g.tirar()
         self.assertIsNone(g.ultimo_error())
+    
+    def test_no_permite_mover_si_hay_barra_y_origen_distinto_a_entrada(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.enviar_a_barra(pid)
+        g._Juego__movs_restantes__ = [3]
+        origen_mal = 5
+        ok = g.mover_ficha(origen_mal, 8)
+        self.assertFalse(ok)
+        self.assertIn("barra", g.ultimo_error() or "")
+
+    def test_reingreso_desde_barra_consumo_y_quita_de_barra(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.enviar_a_barra(pid)
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)  
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_en_barra(pid), 0)
+        self.assertEqual(g.movimientos_disponibles(), [])
+
 
 if __name__ == "__main__":
     unittest.main()
