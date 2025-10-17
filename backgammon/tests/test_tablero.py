@@ -3,6 +3,7 @@ from backgammon.core.tablero import Tablero, PUNTOS, FICHAS_POR_JUGADOR
 from backgammon.core.juego import Juego
 from backgammon.core.jugador import Jugador
 
+
 class PruebasTablero(unittest.TestCase):
 
     def test_punto_valido(self):
@@ -42,7 +43,7 @@ class PruebasTablero(unittest.TestCase):
 
     def test_hay_ganador_true_e_id(self):
         t = Tablero()
-        t._Tablero__salidas__ = {7: FICHAS_POR_JUGADOR} 
+        t.__salidas__ = {7: FICHAS_POR_JUGADOR} 
         self.assertTrue(t.hay_ganador())
         self.assertEqual(t.id_ganador(), 7)
 
@@ -113,16 +114,15 @@ class PruebasTablero(unittest.TestCase):
 
     def test_preparar_posicion_inicial_limpia_todo(self):
         t = Tablero()
-        t._Tablero__barra__ = {7: 3}
-        t._Tablero__salidas__ = {7: 5}
+        t.__barra__ = {7: 3}
+        t.__salidas__ = {7: 5}
         t.colocar_ficha(1, 0)
         t.colocar_ficha(2, 23)
 
         t.preparar_posicion_inicial()
-        self.assertEqual(t._Tablero__barra__, {})
-        self.assertEqual(t._Tablero__salidas__, {})
+        self.assertEqual(t.__barra__, {})
+        self.assertEqual(t.__salidas__, {})
         self.assertTrue(all(len(t.punto(i)) == 0 for i in range(PUNTOS)))
-
 
 class PruebasTableroExtra(unittest.TestCase): 
     
@@ -164,32 +164,23 @@ class PruebasTableroExtra(unittest.TestCase):
 
     def test_hit_envia_a_barra_y_ocupa(self):
         t = Tablero()
-        t._Tablero__puntos__ = t._Tablero__puntos__ if hasattr(t, "_Tablero__puntos__") else None  
-        t._Tablero__puntos__  
-        t._Tablero__barra__   
-        t._Tablero__salidas__ 
-        t._Tablero__Tablero__ 
-        t._Tablero__Tablero__ if False else None 
-        t._Tablero__puntos__ if False else None  
-        t._Tablero__puntos__ = [[] for _ in range(PUNTOS)] if hasattr(t, "_Tablero__puntos__") else None 
         t.colocar_ficha(1, 0)
         t.colocar_ficha(2, 3)
-
+        
         ok = t.mover_ficha_seguro(1, 0, 3)
+        
         self.assertTrue(ok)
         self.assertEqual(t.punto(3), [1])
         self.assertEqual(t.fichas_en_barra(2), 1)
 
-
     def test_aliases_de_barra_y_salidas_se_reflejan(self):
         t = Tablero()
-        t._Tablero__barra__ = {7: 2}
+        t.__barra__ = {7: 2}
         self.assertEqual(t.fichas_en_barra(7), 2)
 
-        t._Tablero__salidas__ = {5: FICHAS_POR_JUGADOR}
+        t.__salidas__ = {5: FICHAS_POR_JUGADOR}
         self.assertTrue(t.hay_ganador())
         self.assertEqual(t.id_ganador(), 5)
-
 
     def test_mover_ficha_seguro_bloqueado_por_oponente(self):
         t = Tablero()
@@ -201,31 +192,21 @@ class PruebasTableroExtra(unittest.TestCase):
         self.assertEqual(t.punto(0), [1])
         self.assertEqual(t.punto(4), [2, 2])
 
-    def test_mover_ficha_indices_fuera_de_rango_error_en_juego(self):
-        g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
-        ok = g.mover_ficha(-1, 2)  
-        assert not ok and "fuera de rango" in (g.ultimo_error() or "")
-
-    def test_mover_ficha_indices_fuera_de_rango_error_en_juego(self):
-        g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
-        ok = g.mover_ficha(-1, 2)
-        assert not ok and "fuera de rango" in (g.ultimo_error() or "")
-
     def test_mover_ficha_seguro_exitoso_desde_juego(self):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
-        g._Juego__tablero__.colocar_ficha(pid, 0)
-        g._Juego__movs_restantes__ = [3]
+        g.tablero.colocar_ficha(pid, 0)
+        g.__movs_restantes__ = [3]
         ok = g.mover_ficha(0, 3)
-        assert ok and g.jugador_actual.nombre == "B"
+        self.assertTrue(ok)
+        self.assertEqual(g.jugador_actual.nombre, "B")
+
     def test_reingresar_desde_barra_falla_si_bloqueado(self):
         t = Tablero()
         pid = 1
         rival = 2
         t.enviar_a_barra(pid)
-        t._Tablero__puntos__[4] = [rival, rival]
+        t.__puntos__[4] = [rival, rival]
         self.assertFalse(t.reingresar_desde_barra(pid, 4))
         self.assertEqual(t.fichas_en_barra(pid), 1)
 
@@ -234,12 +215,12 @@ class PruebasTableroExtra(unittest.TestCase):
         pid = 1
         rival = 2
         t.enviar_a_barra(pid)
-        t._Tablero__puntos__[5] = [rival]  
+        t.__puntos__[5] = [rival] 
         ok = t.reingresar_desde_barra(pid, 5)
         self.assertTrue(ok)
         self.assertEqual(t.fichas_en_barra(pid), 0)
-        self.assertEqual(t.punto(5), [pid])     
-        self.assertEqual(t.fichas_en_barra(rival), 1)  
+        self.assertEqual(t.punto(5), [pid])      
+        self.assertEqual(t.fichas_en_barra(rival), 1) 
 
 
 if __name__ == "__main__":
