@@ -11,7 +11,7 @@ class Juego:
         self.__jugadores__ = [jugador1, jugador2]
         self.__dados__ = Dados()
         self.__indice_jugador_actual__ = 0 if indice_inicial not in (0, 1) else indice_inicial
-        self.__barra__ = {jugador1.id: 0, jugador2.id: 0} 
+        self.__barra__ = {jugador1.id: 0, jugador2.id: 0}
         self.__estado__ = "inicial"
         self.__movs_restantes__ = []
         self.__ultimo_error__ = None
@@ -49,10 +49,7 @@ class Juego:
         self.__dados__.fijar_semilla(semilla)
 
     def tirar(self):
-        """
-        Tira los dados, registra los movimientos disponibles y cambia el estado a "en_curso" 
-        si era "inicial".
-        """
+        """Tira los dados, registra los movimientos disponibles y cambia el estado."""
         d1, d2, movimientos = self.__dados__.tirar()
         self.__movs_restantes__ = list(movimientos)
         if self.__estado__ == "inicial":
@@ -73,7 +70,7 @@ class Juego:
     def es_ficha_mas_lejana(self, jugador_id: int, punto: int) -> bool:
         """Verifica si la ficha en 'punto' es la más lejana del home board."""
         
-        if jugador_id % 2 != 0: 
+        if jugador_id % 2 != 0:
             puntos_relevantes = [i for i in range(18, punto) if jugador_id in self.__tablero__.punto(i)]
             return not puntos_relevantes
         else:
@@ -84,7 +81,7 @@ class Juego:
         """Punto de entrada (desde la barra) para el jugador."""
         j1_id = self.__jugadores__[0].id
         return 0 if pid == j1_id else 23
-    
+
     def _en_barra(self, pid: int) -> bool:
         """Verifica si el jugador tiene fichas en la barra."""
         return self.__tablero__.fichas_en_barra(pid) > 0
@@ -99,11 +96,10 @@ class Juego:
         
         if self._en_barra(pid):
             entrada = self._entrada_para(pid)
-            
             if desde != entrada:
                 self._set_error("tenés fichas en la barra: reingresá primero")
                 return False, 0
-
+            
             distancia = abs(hasta - entrada)
             
             if self.__tablero__._bloqueado_por_oponente(pid, hasta):
@@ -114,28 +110,28 @@ class Juego:
             if not self.__tablero__.puede_sacar_fichas(pid):
                 self._set_error("solo podés sacar fichas si todas están en tu zona de salida")
                 return False, 0
-
-            if pid % 2 != 0: 
+            
+            if pid % 2 != 0:
                 distancia = PUNTOS - desde
-            else: 
+            else:
                 distancia = desde + 1
-
+            
             if distancia in self.__movs_restantes__:
-                pass 
+                pass
             else:
                 if self.es_ficha_mas_lejana(pid, desde):
                     dado_a_usar = self._dado_mayor_que(distancia)
                     if dado_a_usar is None:
                         self._set_error(f"la distancia {distancia} no está en movs {self.__movs_restantes__} ni se puede sobrepasar")
                         return False, distancia 
-                    distancia = dado_a_usar 
+                    distancia = dado_a_usar
                 else:
                     self._set_error("no se puede sobrepasar: hay fichas más lejos que requieren un dado menor")
                     return False, distancia
                 
         else:
             distancia = abs(hasta - desde)
-            if pid % 2 != 0: 
+            if pid % 2 != 0:
                 if hasta < desde:
                     self._set_error("el jugador debe moverse hacia adelante (de menor a mayor índice)")
                     return False, distancia
@@ -165,14 +161,14 @@ class Juego:
             return False
 
         pid = self.jugador_actual.id
-        ok = False 
-        dado_consumido = distancia 
+        ok = False
+        dado_consumido = distancia
 
         if hasta == PUNTOS:
             ok = self.__tablero__.sacar_ficha(pid, desde)
             if ok:
                 distancia_a_salida = PUNTOS - desde if pid % 2 != 0 else desde + 1
-                if distancia not in self.__movs_restantes__: 
+                if distancia not in self.__movs_restantes__:
                     dado_consumido = self._dado_mayor_que(distancia_a_salida)
                 
                 if dado_consumido in self.__movs_restantes__:
@@ -261,11 +257,13 @@ class Juego:
                 f"(id {e['jugador_actual_id']}) | movs={e['movs_restantes']}")
 
     def reiniciar(self):
-        """Reinicia el tablero, movimientos y estado a valores iniciales."""
-        self.__tablero__.preparar_posicion_inicial()
+        """Reinicia el tablero a la posición inicial estándar, movimientos y estado."""
+        j1_id = self.__jugadores__[0].id
+        j2_id = self.__jugadores__[1].id
+        self.__tablero__.posicion_inicial_estandar(j1_id, j2_id)
         self.__movs_restantes__.clear()
         self.__indice_jugador_actual__ = 0
-        self.__estado__ = "inicial"
+        self.__estado__ = "inicial" 
         self._set_error(None)
         self._actualizar_estado()
 
