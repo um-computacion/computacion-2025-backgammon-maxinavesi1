@@ -1,7 +1,8 @@
 import unittest
 from backgammon.core.juego import Juego
 from backgammon.core.jugador import Jugador
-
+from backgammon.core.tablero import PUNTOS, FICHAS_POR_JUGADOR
+from backgammon.core.tablero import Tablero 
 
 class _TableroFalso:
     def __init__(self, ganador_id):
@@ -10,6 +11,14 @@ class _TableroFalso:
         return True
     def id_ganador(self):
         return self._gid
+
+def _preparar_bearing_off(juego: Juego, pid: int, pos_ficha: int):
+    """Fuerza el estado para que 'juego' pueda sacar fichas, con una ficha en 'pos_ficha'."""
+
+    juego.tablero.preparar_posicion_inicial()
+    juego.tablero.__salidas__ = {pid: FICHAS_POR_JUGADOR - 1}
+    juego.tablero.colocar_ficha(pid, pos_ficha)
+    juego.__movs_restantes__ = []
 
 
 class PruebasJuego(unittest.TestCase):
@@ -67,22 +76,22 @@ class PruebasJuego(unittest.TestCase):
         g = Juego(Jugador("A"), Jugador("B"))
         g.__movs_restantes__ = [3]
         pid = g.jugador_actual.id
-        g.__tablero__.colocar_ficha(pid, 0)
+        g.tablero.colocar_ficha(pid, 0)
         ok = g.aplicar_movimiento(0, 3)
         self.assertTrue(ok)
         self.assertEqual(g.movimientos_disponibles(), [])
-        self.assertEqual(g.__tablero__.punto(0), [])
-        self.assertEqual(g.__tablero__.punto(3), [pid])
+        self.assertEqual(g.tablero.punto(0), [])
+        self.assertEqual(g.tablero.punto(3), [pid])
 
     def test_aplicar_movimiento_distancia_invalida(self):
         g = Juego(Jugador("A"), Jugador("B"))
         g.__movs_restantes__ = [2]
         pid = g.jugador_actual.id
-        g.__tablero__.colocar_ficha(pid, 0)
+        g.tablero.colocar_ficha(pid, 0)
         ok = g.aplicar_movimiento(0, 3)
         self.assertFalse(ok)
-        self.assertEqual(g.__tablero__.punto(0), [pid])
-        self.assertEqual(g.__tablero__.punto(3), [])
+        self.assertEqual(g.tablero.punto(0), [pid])
+        self.assertEqual(g.tablero.punto(3), [])
 
     def test_juego_usar_semilla_reproduce(self):
         g = Juego(Jugador("A"), Jugador("B"))
@@ -116,7 +125,7 @@ class PruebasJuego(unittest.TestCase):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
         g.__movs_restantes__ = [2]
-        g.__tablero__.colocar_ficha(pid, 0)
+        g.tablero.colocar_ficha(pid, 0)
         ok = g.mover_ficha(0, 2)
         self.assertTrue(ok)
         self.assertEqual(g.movimientos_disponibles(), [])
@@ -128,6 +137,7 @@ class PruebasJuego(unittest.TestCase):
         ok = g.mover_ficha(0, 3)  
         self.assertFalse(ok)
         self.assertEqual(g.movimientos_disponibles(), [3])
+        self.assertIn("no hay ficha", g.ultimo_error() or "") 
 
     def test_estado_dict_y_resumen_formato(self):
         g = Juego(Jugador("A"), Jugador("B"))
@@ -162,7 +172,7 @@ class PruebasJuego(unittest.TestCase):
         d1, d2, movs = g.tirar()
         snap = g.estado_dict()
         for k in ("estado", "jugador_actual", "jugador_actual_id",
-                  "movs_restantes", "puntos", "barra", "salidas"):
+                     "movs_restantes", "puntos", "barra", "salidas"):
             self.assertIn(k, snap)
         resumen = g.resumen_estado()
         self.assertIn("estado=", resumen)
@@ -181,8 +191,8 @@ class PruebasJuego(unittest.TestCase):
     def test_mover_ficha_consumo_distancia_y_cambio_turno(self):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
-        g._Juego__tablero__.colocar_ficha(pid, 0)
-        g._Juego__movs_restantes__ = [3]
+        g.tablero.colocar_ficha(pid, 0) 
+        g.__movs_restantes__ = [3]
         ok = g.mover_ficha(0, 3)
         self.assertTrue(ok)
         self.assertEqual(g.jugador_actual.nombre, "B")
@@ -191,14 +201,14 @@ class PruebasJuego(unittest.TestCase):
     def test_mover_ficha_falla_por_distancia_invalida(self):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
-        g._Juego__tablero__.colocar_ficha(pid, 0)
-        g._Juego__movs_restantes__ = [2]
+        g.tablero.colocar_ficha(pid, 0) 
+        g.__movs_restantes__ = [2]
         self.assertFalse(g.mover_ficha(0, 3))
         self.assertEqual(g.movimientos_disponibles(), [2])
 
     def test_aplicar_movimiento_sin_ficha_no_modifica(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
+        g.__movs_restantes__ = [3]
         self.assertFalse(g.aplicar_movimiento(0, 3))
         self.assertEqual(g.movimientos_disponibles(), [3])
 
@@ -208,7 +218,7 @@ class PruebasJuego(unittest.TestCase):
 
     def test_usar_semilla_y_tirar_cubre_rama(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g.usar_semilla(1234)                 
+        g.usar_semilla(1234)                         
         r1 = g.tirar()
         g.usar_semilla(1234)
         r2 = g.tirar()
@@ -217,27 +227,26 @@ class PruebasJuego(unittest.TestCase):
     def test_mover_ficha_consumo_parcial_sin_cambiar_turno(self):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
-        g._Juego__tablero__.colocar_ficha(pid, 0)
-        g._Juego__movs_restantes__ = [3, 2]
+        g.tablero.colocar_ficha(pid, 0) 
+        g.__movs_restantes__ = [3, 2]
         ok = g.mover_ficha(0, 3)
         self.assertTrue(ok)
-        self.assertEqual(g.jugador_actual.nombre, "A")   
+        self.assertEqual(g.jugador_actual.nombre, "A")  
         self.assertEqual(g.movimientos_disponibles(), [2])
-        self.assertEqual(g.estado, "en_curso")          
+        self.assertEqual(g.estado, "en_curso")            
 
     def test_estado_pasa_a_terminado_cuando_hay_ganador(self):
-        from backgammon.core.tablero import FICHAS_POR_JUGADOR
         g = Juego(Jugador("A"), Jugador("B"))
-        g.tablero._Tablero__salidas__ = {g.jugador_actual.id: FICHAS_POR_JUGADOR}
-        g.cambiar_turno()                                
+        g.tablero.__salidas__ = {g.jugador_actual.id: FICHAS_POR_JUGADOR}
+        g._actualizar_estado()
         self.assertEqual(g.estado, "terminado")
 
     def test_aplicar_movimiento_no_cambia_turno_pero_consumo(self):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
-        g._Juego__tablero__.colocar_ficha(pid, 0)
-        g._Juego__movs_restantes__ = [3, 4]
-        ok = g.aplicar_movimiento(0, 3)                 
+        g.tablero.colocar_ficha(pid, 0) 
+        g.__movs_restantes__ = [3, 4]
+        ok = g.aplicar_movimiento(0, 3)                         
         self.assertTrue(ok)
         self.assertEqual(g.jugador_actual.nombre, "A")
         self.assertEqual(g.movimientos_disponibles(), [4])
@@ -255,11 +264,11 @@ class PruebasJuego(unittest.TestCase):
     def test_juego_bloqueo_impide_mover_y_no_consumo(self):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
-        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g.tablero.colocar_ficha(pid, 0) 
         rival = 2 if pid == 1 else 1
-        g._Juego__tablero__.colocar_ficha(rival, 3)
-        g._Juego__tablero__.colocar_ficha(rival, 3)
-        g._Juego__movs_restantes__ = [3]
+        g.tablero.colocar_ficha(rival, 3)
+        g.tablero.colocar_ficha(rival, 3)
+        g.__movs_restantes__ = [3]
         ok = g.mover_ficha(0, 3)
         self.assertFalse(ok)
         self.assertEqual(g.movimientos_disponibles(), [3])
@@ -270,9 +279,9 @@ class PruebasJuego(unittest.TestCase):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
         rival = 2 if pid == 1 else 1
-        g._Juego__tablero__.colocar_ficha(pid, 0)
-        g._Juego__tablero__.colocar_ficha(rival, 3)  
-        g._Juego__movs_restantes__ = [3]
+        g.tablero.colocar_ficha(pid, 0) 
+        g.tablero.colocar_ficha(rival, 3)  
+        g.__movs_restantes__ = [3]
         ok = g.mover_ficha(0, 3)
         self.assertTrue(ok)
         self.assertEqual(g.tablero.fichas_en_barra(rival), 1)
@@ -282,15 +291,15 @@ class PruebasJuego(unittest.TestCase):
 
     def test_alias_movs_restantes_espeja_en_getter(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [4, 1]
+        g.__movs_restantes__ = [4, 1]
         self.assertEqual(g.movimientos_disponibles(), [4, 1])
         pid = g.jugador_actual.id
-        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g.tablero.colocar_ficha(pid, 0) 
         ok = g.aplicar_movimiento(0, 4)
         if not ok:
-            g._Juego__tablero__.preparar_posicion_inicial()
-            g._Juego__tablero__.colocar_ficha(pid, 0)
-            g._Juego__movs_restantes__ = [1]
+            g.tablero.preparar_posicion_inicial()
+            g.tablero.colocar_ficha(pid, 0)
+            g.__movs_restantes__ = [1]
             ok = g.aplicar_movimiento(0, 1)
         self.assertTrue(ok)
         self.assertIn(len(g.movimientos_disponibles()), (0, 1))  
@@ -299,49 +308,53 @@ class PruebasJuego(unittest.TestCase):
     def test_alias_reemplazo_de_tablero_dispara_estado_terminado(self):
         a = Jugador("A"); b = Jugador("B")
         g = Juego(a, b)
-        from backgammon.core.tablero import Tablero, FICHAS_POR_JUGADOR
+        
         t = Tablero()
-        t._Tablero__salidas__ = {a.id: FICHAS_POR_JUGADOR}
-        g._Juego__tablero__ = t
-        g.cambiar_turno()
+        t.__salidas__ = {a.id: FICHAS_POR_JUGADOR}
+        g.__tablero__ = t 
+        
+        g._actualizar_estado()
         self.assertEqual(g.estado, "terminado")
 
     def test_mover_ficha_falla_por_bloqueo_registra_error(self):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
-        g._Juego__tablero__.colocar_ficha(pid, 0)
+        g.tablero.colocar_ficha(pid, 0) 
         rival = 2 if pid == 1 else 1
-        g._Juego__tablero__._Tablero__puntos__ = g._Juego__tablero__._Tablero__puntos__
-        g._Juego__tablero__._Tablero__puntos__[4] = [rival, rival]
-        g._Juego__movs_restantes__ = [4]
+        g.tablero.__puntos__[4] = [rival, rival] 
+        g.__movs_restantes__ = [4]
         ok = g.mover_ficha(0, 4)
         self.assertFalse(ok)
         self.assertIn("bloqueado", g.ultimo_error() or "")
 
     def test_mover_ficha_distancia_no_disponible_registra_error(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0) 
+        g.__movs_restantes__ = [3]
         ok = g.mover_ficha(0, 2)  
         self.assertFalse(ok)
         self.assertIn("distancia 2", g.ultimo_error() or "")
 
     def test_aplicar_mov_distancia_no_disponible_registra_error(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0) 
+        g.__movs_restantes__ = [3]
         ok = g.aplicar_movimiento(0, 2)  
         self.assertFalse(ok)
         self.assertIn("distancia 2", g.ultimo_error() or "")
 
     def test_aplicar_mov_indices_fuera_de_rango_registra_error(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
+        g.__movs_restantes__ = [3]
         ok = g.aplicar_movimiento(-1, 2) 
         self.assertFalse(ok)
         self.assertIn("fuera de rango", g.ultimo_error() or "")
 
     def test_aplicar_mov_sin_ficha_en_origen_registra_error(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
+        g.__movs_restantes__ = [3]
         ok = g.aplicar_movimiento(0, 3)  
         self.assertFalse(ok)
         self.assertIn("no hay ficha", g.ultimo_error() or "")
@@ -350,23 +363,23 @@ class PruebasJuego(unittest.TestCase):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
         rival = 2 if pid == 1 else 1
-        g._Juego__tablero__.colocar_ficha(pid, 0)
-        g._Juego__tablero__._Tablero__puntos__[4] = [rival, rival]
-        g._Juego__movs_restantes__ = [4]
+        g.tablero.colocar_ficha(pid, 0) 
+        g.tablero.__puntos__[4] = [rival, rival]
+        g.__movs_restantes__ = [4]
         ok = g.aplicar_movimiento(0, 4)
         self.assertFalse(ok)
         self.assertIn("bloqueado", g.ultimo_error() or "")
 
     def test_mover_indices_fuera_de_rango_registra_error(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
+        g.__movs_restantes__ = [3]
         ok = g.mover_ficha(0, 99)
         self.assertFalse(ok)
         self.assertIn("fuera de rango", g.ultimo_error() or "")
 
     def test_mover_sin_ficha_en_origen_registra_error(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
+        g.__movs_restantes__ = [3]
         ok = g.mover_ficha(0, 3)
         self.assertFalse(ok)
         self.assertIn("no hay ficha", g.ultimo_error() or "")
@@ -375,16 +388,16 @@ class PruebasJuego(unittest.TestCase):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
         rival = 2 if pid == 1 else 1
-        g._Juego__tablero__.colocar_ficha(pid, 0)
-        g._Juego__tablero__._Tablero__puntos__[4] = [rival, rival]
-        g._Juego__movs_restantes__ = [4]
+        g.tablero.colocar_ficha(pid, 0) 
+        g.tablero.__puntos__[4] = [rival, rival]
+        g.__movs_restantes__ = [4]
         ok = g.mover_ficha(0, 4)
         self.assertFalse(ok)
         self.assertIn("bloqueado", g.ultimo_error() or "")
 
     def test_tirar_limpia_ultimo_error(self):
         g = Juego(Jugador("A"), Jugador("B"))
-        g._Juego__movs_restantes__ = [3]
+        g.__movs_restantes__ = [3]
         _ = g.mover_ficha(0, 2)  
         self.assertIsNotNone(g.ultimo_error())
         g.tirar()
@@ -394,7 +407,7 @@ class PruebasJuego(unittest.TestCase):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
         g.tablero.enviar_a_barra(pid)
-        g._Juego__movs_restantes__ = [3]
+        g.__movs_restantes__ = [3]
         origen_mal = 5
         ok = g.mover_ficha(origen_mal, 8)
         self.assertFalse(ok)
@@ -404,10 +417,86 @@ class PruebasJuego(unittest.TestCase):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
         g.tablero.enviar_a_barra(pid)
-        g._Juego__movs_restantes__ = [3]
+        g.__movs_restantes__ = [3]
         ok = g.mover_ficha(0, 3)  
         self.assertTrue(ok)
         self.assertEqual(g.tablero.fichas_en_barra(pid), 0)
+        self.assertEqual(g.movimientos_disponibles(), [])
+
+    def _preparar_bearing_off(self, juego: Juego, pid: int, pos_ficha: int):
+        """Fuerza el estado para que 'juego' pueda sacar fichas, con una ficha en 'pos_ficha'."""
+        _preparar_bearing_off(juego, pid, pos_ficha)
+
+    def test_bearing_off_exacto_j1_consume_dado(self):
+        """J1 saca ficha usando dado exacto."""
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id 
+        pos_ficha = 22 
+        self._preparar_bearing_off(g, pid, pos_ficha)
+        g.__movs_restantes__ = [2, 6]
+        
+        ok = g.mover_ficha(pos_ficha, PUNTOS)
+        
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR) 
+        self.assertEqual(g.movimientos_disponibles(), [6])
+
+    def test_bearing_off_over_bearing_j1_consume_dado_mayor(self):
+        """J1 saca ficha (posicion 23, distancia 1) con un dado de 5 (over-bearing)."""
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id 
+        pos_ficha = 23 
+        self._preparar_bearing_off(g, pid, pos_ficha)
+        g.__movs_restantes__ = [5, 6]
+        
+        ok = g.mover_ficha(pos_ficha, PUNTOS)
+        
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR) 
+        self.assertEqual(g.movimientos_disponibles(), [6])
+
+    def test_bearing_off_over_bearing_falla_si_hay_ficha_mas_lejana_j1(self):
+        """J1: No puede usar dado de 5 si la ficha más lejana es distancia 3."""
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id 
+        g.tablero.preparar_posicion_inicial()
+        g.tablero.__salidas__ = {pid: FICHAS_POR_JUGADOR - 2}
+        g.tablero.colocar_ficha(pid, 23)
+        g.tablero.colocar_ficha(pid, 21)
+        g.__movs_restantes__ = [5, 6]
+        
+        ok = g.mover_ficha(23, PUNTOS) 
+        
+        self.assertFalse(ok)
+        self.assertIn("más lejos que requieren un dado menor", g.ultimo_error() or "")
+        self.assertEqual(g.movimientos_disponibles(), [5, 6]) 
+        self.assertEqual(g.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR - 2)
+        
+    def test_bearing_off_falla_si_no_puede_sacar_fichas(self):
+        """Falla si no se cumple la condición de home board."""
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id 
+        g.tablero.colocar_ficha(pid, 17) 
+        g.__movs_restantes__ = [6]
+        
+        ok = g.mover_ficha(17, PUNTOS)
+        
+        self.assertFalse(ok)
+        self.assertIn("solo podés sacar fichas", g.ultimo_error() or "")
+        self.assertEqual(g.movimientos_disponibles(), [6]) 
+
+    def test_bearing_off_exacto_j2(self):
+        """J2 saca ficha usando dado exacto."""
+        g = Juego(Jugador("A"), Jugador("B"), indice_inicial=1) 
+        pid = g.jugador_actual.id 
+        pos_ficha = 2 
+        self._preparar_bearing_off(g, pid, pos_ficha)
+        g.__movs_restantes__ = [3]
+        
+        ok = g.mover_ficha(pos_ficha, PUNTOS)
+        
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR)
         self.assertEqual(g.movimientos_disponibles(), [])
 
 

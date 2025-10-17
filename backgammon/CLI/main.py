@@ -74,7 +74,7 @@ def main():
             try:
                 desde = int(args[i + 1]); hasta = int(args[i + 2])
             except ValueError:
-                print("Parámetros inválidos. Ej: --mover 0 3"); return
+                print("Parámetros inválidos. Ej: --mover 0 3 o --mover 22 24"); return
             
             ok = juego.mover_ficha(desde, hasta)
             if ok:
