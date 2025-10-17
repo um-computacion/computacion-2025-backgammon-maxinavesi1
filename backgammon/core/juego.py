@@ -1,278 +1,504 @@
-from backgammon.core.tablero import Tablero, PUNTOS
-from backgammon.core.dados import Dados
-from backgammon.core.jugador import Jugador 
+import unittest
+from backgammon.core.juego import Juego
+from backgammon.core.jugador import Jugador
+from backgammon.core.tablero import PUNTOS, FICHAS_POR_JUGADOR, Tablero
+from backgammon.core.checker import Checker 
 
-class Juego:
-    """Coordina el estado del juego, los dados y el turno actual."""
+def _preparar_bearing_off(juego: Juego, pid: int, pos_ficha: int):
+    """Fuerza el estado para que 'juego' pueda sacar fichas, con una ficha en 'pos_ficha'."""
+    juego.tablero.preparar_posicion_inicial()
+    juego.tablero.__salidas__ = {pid: FICHAS_POR_JUGADOR - 1}
+    juego.tablero.colocar_ficha(pid, pos_ficha)
+    juego.__movs_restantes__ = []
 
-    def __init__(self, jugador1, jugador2, indice_inicial=0):
-        """Inicializa el juego con 2 jugadores."""
-        self.__tablero__ = Tablero()
-        self.__jugadores__ = [jugador1, jugador2]
-        self.__dados__ = Dados()
-        self.__indice_jugador_actual__ = 0 if indice_inicial not in (0, 1) else indice_inicial
-        self.__barra__ = {jugador1.id: 0, jugador2.id: 0} 
-        self.__estado__ = "inicial"
-        self.__movs_restantes__ = []
-        self.__ultimo_error__ = None
 
-    @property
-    def tablero(self):
-        """Devuelve la instancia del tablero de juego."""
-        return self.__tablero__
+class _TableroFalso:
+    def __init__(self, ganador_id):
+        self._gid = ganador_id
+    def hay_ganador(self):
+        return True
+    def id_ganador(self):
+        return self._gid
 
-    @property
-    def estado(self):
-        """Devuelve el estado actual del juego ("inicial", "en_curso", "terminado")."""
-        return self.__estado__
 
-    @property
-    def jugador_actual(self):
-        """Devuelve la instancia del jugador al que le toca mover."""
-        return self.__jugadores__[self.__indice_jugador_actual__]
+class PruebasJuego(unittest.TestCase):
+
+    def test_turno_inicial(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertEqual(g.jugador_actual.nombre, "A")
+
+    def test_tirar_devuelve_3_valores(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        r = g.tirar()
+        self.assertEqual(len(r), 3)
+
+    def test_indice_inicial_valido_1(self):
+        g = Juego(Jugador("A"), Jugador("B"), indice_inicial=1)
+        self.assertEqual(g.jugador_actual.nombre, "B")
+
+    def test_indice_inicial_invalido_se_normaliza_a_0(self):
+        g = Juego(Jugador("A"), Jugador("B"), indice_inicial=9)
+        self.assertEqual(g.jugador_actual.nombre, "A")
+
+    def test_cambiar_turno(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertEqual(g.jugador_actual.nombre, "A")
+        g.cambiar_turno()
+        self.assertEqual(g.jugador_actual.nombre, "B")
+
+    def test_termino_y_ganador_none(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertFalse(g.termino())
+        self.assertIsNone(g.ganador())
+
+    def test_ganador_devuelto(self):
+        a = Jugador("A"); b = Jugador("B")
+        g = Juego(a, b)
+        g.__tablero__ = _TableroFalso(a.id)
+        self.assertTrue(g.termino())
+        self.assertEqual(g.ganador().id, a.id)
+
+    def test_ganador_none_cuando_id_no_coincide(self):
+        a = Jugador("A"); b = Jugador("B")
+        g = Juego(a, b)
+        g.__tablero__ = _TableroFalso(999)
+        self.assertTrue(g.termino())
+        self.assertIsNone(g.ganador())
+
+    def test_movimientos_quedan_guardados_y_son_copia(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        d1, d2, movs = g.tirar()
+        self.assertEqual(sorted(g.movimientos_disponibles()), sorted(movs))
+        copia = g.movimientos_disponibles()
+        copia.clear()
+        self.assertEqual(sorted(g.movimientos_disponibles()), sorted(movs))
+
+    def test_movimientos_disponibles_y_aplicar(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        ok = g.aplicar_movimiento(0, 3)
+        self.assertTrue(ok)
+        self.assertEqual(g.movimientos_disponibles(), [])
+        self.assertEqual(g.tablero.punto(0), [])
+        self.assertEqual(len(g.tablero.punto(3)), 1)
+        self.assertIsInstance(g.tablero.punto(3)[0], Checker)
+        self.assertEqual(g.tablero.punto(3)[0].owner_id, pid)
+
+    def test_aplicar_movimiento_distancia_invalida(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [2]
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        ok = g.aplicar_movimiento(0, 3)
+        self.assertFalse(ok)
+        self.assertEqual(len(g.tablero.punto(0)), 1)
+        self.assertEqual(g.tablero.punto(3), [])
+
+    def test_juego_usar_semilla_reproduce(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(9)
+        a = g.tirar()
+        g.usar_semilla(9)
+        b = g.tirar()
+        self.assertEqual(a, b)
+
+
+    def test_tirar_cambia_estado_a_en_curso(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertEqual(g.estado, "inicial")
+        g.tirar()
+        self.assertEqual(g.estado, "en_curso")
+
+    def test_colocar_cambia_estado_desde_inicial(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertEqual(g.estado, "inicial")
+        self.assertTrue(g.colocar_ficha_en(0))
+        self.assertEqual(g.estado, "en_curso")
+
+    def test_cambiar_turno_limpia_movs(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [2, 3]
+        g.cambiar_turno()
+        self.assertEqual(g.jugador_actual.nombre, "B")
+        self.assertEqual(g.movimientos_disponibles(), [])
+
+    def test_mover_ficha_consumo_y_cambio_turno(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.__movs_restantes__ = [2]
+        g.tablero.colocar_ficha(pid, 0)
+        ok = g.mover_ficha(0, 2)
+        self.assertTrue(ok)
+        self.assertEqual(g.movimientos_disponibles(), [])
+        self.assertEqual(g.jugador_actual.nombre, "B")  
+
+    def test_mover_ficha_distancia_valida_pero_sin_ficha_no_mueve(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)  
+        self.assertFalse(ok)
+        self.assertEqual(g.movimientos_disponibles(), [3])
+
+    def test_estado_dict_y_resumen_formato(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        e = g.estado_dict()
+        self.assertIn("estado", e)
+        self.assertIn("jugador_actual", e)
+        self.assertIn("movs_restantes", e)
+        s = g.resumen_estado()
+        self.assertIsInstance(s, str)
+        self.assertIn("estado=", s)
+        self.assertIn("movs=", s)
+
+    def test_reiniciar_restaurar_estado(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [4]
+        g.cambiar_turno()
+        g.reiniciar()
+        self.assertEqual(g.estado, "inicial")
+        self.assertEqual(g.jugador_actual.nombre, "A")
+        self.assertEqual(g.movimientos_disponibles(), [])
+
+    def test_colocar_ficha_cambia_estado_a_en_curso(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertEqual(g.estado, "inicial")
+        ok = g.colocar_ficha_en(0)
+        self.assertTrue(ok)
+        self.assertEqual(g.estado, "en_curso")
+
+    def test_resumen_estado_y_estado_dict(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(123)
+        d1, d2, movs = g.tirar()
+        snap = g.estado_dict()
+        for k in ("estado", "jugador_actual", "jugador_actual_id",
+                     "movs_restantes", "puntos", "barra", "salidas"):
+            self.assertIn(k, snap)
+        resumen = g.resumen_estado()
+        self.assertIn("estado=", resumen)
+        self.assertIn("movs=", resumen)
+
+    def test_reiniciar_limpia_movs_y_vuelve_a_inicial(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(1)
+        g.tirar()
+        self.assertEqual(g.estado, "en_curso")
+        g.reiniciar()
+        self.assertEqual(g.estado, "inicial")
+        self.assertEqual(g.movimientos_disponibles(), [])
+        self.assertEqual(g.jugador_actual.nombre, "A")
+
+    def test_mover_ficha_consumo_distancia_y_cambio_turno(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        g.__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)
+        self.assertTrue(ok)
+        self.assertEqual(g.jugador_actual.nombre, "B")
+        self.assertEqual(g.movimientos_disponibles(), [])
+
+    def test_mover_ficha_falla_por_distancia_invalida(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        g.__movs_restantes__ = [2]
+        self.assertFalse(g.mover_ficha(0, 3))
+        self.assertEqual(g.movimientos_disponibles(), [2])
+
+    def test_aplicar_movimiento_sin_ficha_no_modifica(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        self.assertFalse(g.aplicar_movimiento(0, 3))
+        self.assertEqual(g.movimientos_disponibles(), [3])
+
+    def test_tablero_property_devuelve_instancia(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        self.assertIsNotNone(g.tablero.__class__)
+
+    def test_usar_semilla_y_tirar_cubre_rama(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(1234)                         
+        r1 = g.tirar()
+        g.usar_semilla(1234)
+        r2 = g.tirar()
+        self.assertEqual(r1, r2)
+
+    def test_mover_ficha_consumo_parcial_sin_cambiar_turno(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        g.__movs_restantes__ = [3, 2]
+        ok = g.mover_ficha(0, 3)
+        self.assertTrue(ok)
+        self.assertEqual(g.jugador_actual.nombre, "A")  
+        self.assertEqual(g.movimientos_disponibles(), [2])
+        self.assertEqual(g.estado, "en_curso")            
+
+    def test_estado_pasa_a_terminado_cuando_hay_ganador(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.tablero.__salidas__ = {g.jugador_actual.id: FICHAS_POR_JUGADOR}
+        g._actualizar_estado()
+        self.assertEqual(g.estado, "terminado")
+
+    def test_aplicar_movimiento_no_cambia_turno_pero_consumo(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        g.__movs_restantes__ = [3, 4]
+        ok = g.aplicar_movimiento(0, 3)                         
+        self.assertTrue(ok)
+        self.assertEqual(g.jugador_actual.nombre, "A")
+        self.assertEqual(g.movimientos_disponibles(), [4])
+
+    def test_reiniciar_cubre_todas_limpiezas(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.usar_semilla(7)
+        g.tirar()
+        g.colocar_ficha_en(0)
+        g.reiniciar()
+        self.assertEqual(g.estado, "inicial")
+        self.assertEqual(g.movimientos_disponibles(), [])
+        self.assertEqual(g.jugador_actual.nombre, "A")
+
+    def test_juego_bloqueo_impide_mover_y_no_consumo(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        rival = 2 if pid == 1 else 1
+        g.tablero.colocar_ficha(rival, 3)
+        g.tablero.colocar_ficha(rival, 3)
+        g.__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)
+        self.assertFalse(ok)
+        self.assertEqual(g.movimientos_disponibles(), [3])
+        self.assertEqual(g.jugador_actual.id, pid)
+
+
+    def test_juego_hit_envia_a_barra_y_cambia_turno_si_sin_movs(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        rival = 2 if pid == 1 else 1
+        g.tablero.colocar_ficha(pid, 0)
+        g.tablero.colocar_ficha(rival, 3)  
+        g.__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_en_barra(rival), 1)
+        self.assertEqual(len(g.tablero.punto(3)), 1)
+        self.assertIsInstance(g.tablero.punto(3)[0], Checker)
+        self.assertEqual(g.tablero.punto(3)[0].owner_id, pid)
+        self.assertNotEqual(g.jugador_actual.id, pid)
+
+
+    def test_alias_movs_restantes_espeja_en_getter(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [4, 1]
+        self.assertEqual(g.movimientos_disponibles(), [4, 1])
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        ok = g.aplicar_movimiento(0, 4)
+        if not ok:
+            g.tablero.preparar_posicion_inicial()
+            g.tablero.colocar_ficha(pid, 0)
+            g.__movs_restantes__ = [1]
+            ok = g.aplicar_movimiento(0, 1)
+        self.assertTrue(ok)
+        self.assertIn(len(g.movimientos_disponibles()), (0, 1))  
+
+
+    def test_alias_reemplazo_de_tablero_dispara_estado_terminado(self):
+        a = Jugador("A"); b = Jugador("B")
+        g = Juego(a, b)
+        
+        t = Tablero()
+        t.__salidas__ = {a.id: FICHAS_POR_JUGADOR}
+        g.__tablero__ = t
+        
+        g._actualizar_estado()
+        self.assertEqual(g.estado, "terminado")
+
+    def test_mover_ficha_falla_por_bloqueo_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        rival = 2 if pid == 1 else 1
+        g.tablero.__puntos__[4] = [Checker(rival), Checker(rival)] 
+        g.__movs_restantes__ = [4]
+        ok = g.mover_ficha(0, 4)
+        self.assertFalse(ok)
+        self.assertIn("bloqueado", g.ultimo_error() or "")
+
+    def test_mover_ficha_distancia_no_disponible_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        g.__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 2)  
+        self.assertFalse(ok)
+        self.assertIn("distancia 2", g.ultimo_error() or "")
+
+    def test_aplicar_mov_distancia_no_disponible_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.colocar_ficha(pid, 0)
+        g.__movs_restantes__ = [3]
+        ok = g.aplicar_movimiento(0, 2)  
+        self.assertFalse(ok)
+        self.assertIn("distancia 2", g.ultimo_error() or "")
+
+    def test_aplicar_mov_indices_fuera_de_rango_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        ok = g.aplicar_movimiento(-1, 2) 
+        self.assertFalse(ok)
+        self.assertIn("fuera de rango", g.ultimo_error() or "")
+
+    def test_aplicar_mov_sin_ficha_en_origen_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        ok = g.aplicar_movimiento(0, 3)  
+        self.assertFalse(ok)
+        self.assertIn("no hay ficha", g.ultimo_error() or "")
+
+    def test_aplicar_mov_bloqueado_por_oponente_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        rival = 2 if pid == 1 else 1
+        g.tablero.colocar_ficha(pid, 0)
+        g.tablero.__puntos__[4] = [Checker(rival), Checker(rival)]
+        g.__movs_restantes__ = [4]
+        ok = g.aplicar_movimiento(0, 4)
+        self.assertFalse(ok)
+        self.assertIn("bloqueado", g.ultimo_error() or "")
+
+    def test_mover_indices_fuera_de_rango_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 99)
+        self.assertFalse(ok)
+        self.assertIn("fuera de rango", g.ultimo_error() or "")
+
+    def test_mover_sin_ficha_en_origen_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)
+        self.assertFalse(ok)
+        self.assertIn("no hay ficha", g.ultimo_error() or "")
+
+    def test_mover_bloqueado_por_oponente_registra_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        rival = 2 if pid == 1 else 1
+        g.tablero.colocar_ficha(pid, 0)
+        g.tablero.__puntos__[4] = [Checker(rival), Checker(rival)]
+        g.__movs_restantes__ = [4]
+        ok = g.mover_ficha(0, 4)
+        self.assertFalse(ok)
+        self.assertIn("bloqueado", g.ultimo_error() or "")
+
+    def test_tirar_limpia_ultimo_error(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        g.__movs_restantes__ = [3]
+        _ = g.mover_ficha(0, 2)  
+        self.assertIsNotNone(g.ultimo_error())
+        g.tirar()
+        self.assertIsNone(g.ultimo_error())
     
-    @property
-    def jugadores(self):
-        """Devuelve la lista de instancias de Jugador."""
-        return self.__jugadores__
+    def test_no_permite_mover_si_hay_barra_y_origen_distinto_a_entrada(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.enviar_a_barra(pid)
+        g.__movs_restantes__ = [3]
+        origen_mal = 5
+        ok = g.mover_ficha(origen_mal, 8)
+        self.assertFalse(ok)
+        self.assertIn("barra", g.ultimo_error() or "")
 
-    def ultimo_error(self):
-        """Devuelve el mensaje del último error de movimiento."""
-        return self.__ultimo_error__
+    def test_reingreso_desde_barra_consumo_y_quita_de_barra(self):
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id
+        g.tablero.enviar_a_barra(pid)
+        g.__movs_restantes__ = [3]
+        ok = g.mover_ficha(0, 3)  
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_en_barra(pid), 0)
+        self.assertEqual(g.movimientos_disponibles(), [])
 
-    def _set_error(self, msg=None):
-        """Establece el mensaje del último error."""
-        self.__ultimo_error__ = msg
-
-    def usar_semilla(self, semilla: int):
-        """Fija la semilla para el generador de dados (para reproducibilidad)."""
-        self.__dados__.fijar_semilla(semilla)
-
-    def tirar(self):
-        """
-        Tira los dados, registra los movimientos disponibles y cambia el estado a "en_curso" 
-        si era "inicial".
-        """
-        d1, d2, movimientos = self.__dados__.tirar()
-        self.__movs_restantes__ = list(movimientos)
-        if self.__estado__ == "inicial":
-            self.__estado__ = "en_curso"
-        self._set_error(None)
-        self._actualizar_estado()
-        return d1, d2, movimientos
-
-    def movimientos_disponibles(self):
-        """Devuelve una copia de la lista de movimientos de dados restantes."""
-        return list(self.__movs_restantes__)
-
-    def _dado_mayor_que(self, distancia_minima: int) -> int | None:
-        """Busca el dado más pequeño disponible que sea >= distancia_minima."""
-        movs_validos = sorted([m for m in self.__movs_restantes__ if m >= distancia_minima])
-        return movs_validos[0] if movs_validos else None
-
-    def es_ficha_mas_lejana(self, jugador_id: int, punto: int) -> bool:
-        """Verifica si la ficha en 'punto' es la más lejana del home board."""
+    def test_bearing_off_exacto_j1_consume_dado(self):
+        """J1 saca ficha usando dado exacto."""
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id 
+        pos_ficha = 22 
+        _preparar_bearing_off(g, pid, pos_ficha) 
+        g.__movs_restantes__ = [2, 6]
         
-        if jugador_id % 2 != 0: 
-            puntos_relevantes = [i for i in range(18, punto) if jugador_id in self.__tablero__.punto(i)]
-            return not puntos_relevantes
-        else:
-            puntos_relevantes = [i for i in range(punto + 1, 6) if jugador_id in self.__tablero__.punto(i)]
-            return not puntos_relevantes
-            
-    def _entrada_para(self, pid: int) -> int:
-        """Punto de entrada (desde la barra) para el jugador."""
-        j1_id = self.__jugadores__[0].id
-        return 0 if pid == j1_id else 23
-    
-    def _en_barra(self, pid: int) -> bool:
-        """Verifica si el jugador tiene fichas en la barra."""
-        return self.__tablero__.fichas_en_barra(pid) > 0
-
-    def _validar_movimiento(self, desde: int, hasta: int) -> tuple[bool, int]:
-        """Valida si el movimiento es legal, retorna (es_valido, distancia)."""
-        pid = self.jugador_actual.id
-
-        if not (0 <= desde < PUNTOS) or not (0 <= hasta <= PUNTOS):
-            self._set_error(f"índices fuera de rango (0..{PUNTOS-1} o {PUNTOS} para sacar)")
-            return False, 0
+        ok = g.mover_ficha(pos_ficha, PUNTOS)
         
-        if self._en_barra(pid):
-            entrada = self._entrada_para(pid)
-            
-            if desde != entrada:
-                self._set_error("tenés fichas en la barra: reingresá primero")
-                return False, 0
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR) 
+        self.assertEqual(g.movimientos_disponibles(), [6])
 
-            distancia = abs(hasta - entrada)
-            
-            if self.__tablero__._bloqueado_por_oponente(pid, hasta):
-                 self._set_error("destino bloqueado por el oponente")
-                 return False, distancia
-
-        elif hasta == PUNTOS:
-            if not self.__tablero__.puede_sacar_fichas(pid):
-                self._set_error("solo podés sacar fichas si todas están en tu zona de salida")
-                return False, 0
-
-            if pid % 2 != 0: 
-                distancia = PUNTOS - desde
-            else: 
-                distancia = desde + 1
-
-            if distancia in self.__movs_restantes__:
-                pass 
-            else:
-                if self.es_ficha_mas_lejana(pid, desde):
-                    dado_a_usar = self._dado_mayor_que(distancia)
-                    if dado_a_usar is None:
-                        self._set_error(f"la distancia {distancia} no está en movs {self.__movs_restantes__} ni se puede sobrepasar")
-                        return False, distancia 
-                    distancia = dado_a_usar 
-                else:
-                    self._set_error("no se puede sobrepasar: hay fichas más lejos que requieren un dado menor")
-                    return False, distancia
-                
-        else:
-            distancia = abs(hasta - desde)
-            if pid % 2 != 0: 
-                if hasta < desde:
-                    self._set_error("el jugador debe moverse hacia adelante (de menor a mayor índice)")
-                    return False, distancia
-            else:
-                if hasta > desde:
-                    self._set_error("el jugador debe moverse hacia adelante (de mayor a menor índice)")
-                    return False, distancia
-            
-            if pid not in self.__tablero__.punto(desde):
-                self._set_error("no hay ficha del jugador en el origen")
-                return False, distancia
-            if self.__tablero__._bloqueado_por_oponente(pid, hasta):
-                self._set_error("destino bloqueado por el oponente")
-                return False, distancia
-
-        if hasta != PUNTOS and distancia not in self.__movs_restantes__:
-            self._set_error(f"la distancia {distancia} no está en movs {self.__movs_restantes__}")
-            return False, distancia
+    def test_bearing_off_over_bearing_j1_consume_dado_mayor(self):
+        """J1 saca ficha (posicion 23, distancia 1) con un dado de 5 (over-bearing)."""
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id 
+        pos_ficha = 23 
+        _preparar_bearing_off(g, pid, pos_ficha) 
+        g.__movs_restantes__ = [5, 6]
         
-        self._set_error(None)
-        return True, distancia
-    
-    def aplicar_movimiento(self, desde: int, hasta: int) -> bool:
-        """Aplica el movimiento (mover, reingresar o sacar) y consume el dado. No cambia el turno."""
-        ok_pre, distancia = self._validar_movimiento(desde, hasta)
-        if not ok_pre:
-            return False
-
-        pid = self.jugador_actual.id
-        ok = False 
-        dado_consumido = distancia 
-
-        if hasta == PUNTOS:
-            ok = self.__tablero__.sacar_ficha(pid, desde)
-            if ok:
-                distancia_a_salida = PUNTOS - desde if pid % 2 != 0 else desde + 1
-                if distancia not in self.__movs_restantes__: 
-                    dado_consumido = self._dado_mayor_que(distancia_a_salida)
-                
-                if dado_consumido in self.__movs_restantes__:
-                    self.__movs_restantes__.remove(dado_consumido)
-                else:
-                     ok = False 
-            
-        elif self._en_barra(pid):
-            ok = self.__tablero__.reingresar_desde_barra(pid, hasta)
-            if ok:
-                self.__movs_restantes__.remove(distancia)
-        else:
-            ok = self.__tablero__.mover_ficha_seguro(pid, desde, hasta)
-            if ok:
-                self.__movs_restantes__.remove(distancia)
-
-        if ok:
-            self._set_error(None)
-        else:
-            self._set_error(self.__ultimo_error__ or "movimiento inválido") 
+        ok = g.mover_ficha(pos_ficha, PUNTOS)
         
-        self._actualizar_estado()
-        return ok
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR) 
+        self.assertEqual(g.movimientos_disponibles(), [6])
 
-    def mover_ficha(self, desde: int, hasta: int) -> bool:
-        """Aplica el movimiento y si se consumen todos los dados, cambia el turno."""
-        ok = self.aplicar_movimiento(desde, hasta)
+    def test_bearing_off_over_bearing_falla_si_hay_ficha_mas_lejana_j1(self):
+        """J1: No puede usar dado de 5 si la ficha más lejana es distancia 3."""
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id 
+        g.tablero.preparar_posicion_inicial()
+        g.tablero.__salidas__ = {pid: FICHAS_POR_JUGADOR - 2}
+        g.tablero.colocar_ficha(pid, 23)
+        g.tablero.colocar_ficha(pid, 21)
+        g.__movs_restantes__ = [5, 6]
         
-        if ok and not self.__movs_restantes__:
-            self.cambiar_turno()
-        elif ok:
-            self._actualizar_estado()
-            
-        return ok
+        ok = g.mover_ficha(23, PUNTOS) 
+        
+        self.assertFalse(ok)
+        self.assertIn("más lejos que requieren un dado menor", g.ultimo_error() or "")
+        self.assertEqual(g.movimientos_disponibles(), [5, 6]) 
+        self.assertEqual(g.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR - 2)
+        
+    def test_bearing_off_falla_si_no_puede_sacar_fichas(self):
+        """Falla si no se cumple la condición de home board."""
+        g = Juego(Jugador("A"), Jugador("B"))
+        pid = g.jugador_actual.id 
+        g.tablero.colocar_ficha(pid, 17)
+        g.__movs_restantes__ = [6]
+        
+        ok = g.mover_ficha(17, PUNTOS)
+        
+        self.assertFalse(ok)
+        self.assertIn("solo podés sacar fichas", g.ultimo_error() or "")
+        self.assertEqual(g.movimientos_disponibles(), [6]) 
 
-    def colocar_ficha_en(self, punto: int) -> bool:
-        """Coloca una ficha en un punto. Sólo para inicializar o pruebas."""
-        pid = self.jugador_actual.id
-        ok = self.__tablero__.colocar_ficha(pid, punto)
-        if ok and self.__estado__ == "inicial":
-            self.__estado__ = "en_curso"
-        self._set_error(None if ok else "no se pudo colocar ficha")
-        self._actualizar_estado()
-        return ok
+    def test_bearing_off_exacto_j2(self):
+        """J2 saca ficha usando dado exacto."""
+        g = Juego(Jugador("A"), Jugador("B"), indice_inicial=1) 
+        pid = g.jugador_actual.id 
+        pos_ficha = 2 
+        _preparar_bearing_off(g, pid, pos_ficha) 
+        g.__movs_restantes__ = [3]
+        
+        ok = g.mover_ficha(pos_ficha, PUNTOS)
+        
+        self.assertTrue(ok)
+        self.assertEqual(g.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR)
+        self.assertEqual(g.movimientos_disponibles(), [])
 
-    def cambiar_turno(self):
-        """Cambia el jugador actual, limpia los movimientos restantes y actualiza el estado."""
-        self.__indice_jugador_actual__ = 1 - self.__indice_jugador_actual__
-        self.__movs_restantes__.clear()
-        self._set_error(None)
-        self._actualizar_estado()
 
-    def termino(self) -> bool:
-        """Retorna True si el juego ha terminado (hay ganador)."""
-        return self.__tablero__.hay_ganador()
-
-    def ganador(self):
-        """Devuelve el objeto Jugador que ganó, o None."""
-        w = self.__tablero__.id_ganador()
-        if w is None:
-            return None
-        for j in self.__jugadores__:
-            if j.id == w:
-                return j
-        return None
-
-    def estado_dict(self) -> dict:
-        """Devuelve un diccionario con el estado completo del juego (útil para guardar y debug)."""
-        puntos = [self.__tablero__.punto(i)[:] for i in range(PUNTOS)]
-        barra = {pid: self.__tablero__.fichas_en_barra(pid) for pid in [j.id for j in self.__jugadores__]}
-        salidas = {pid: self.__tablero__.fichas_salidas(pid) for pid in [j.id for j in self.__jugadores__]}
-        return {
-            "estado": self.__estado__,
-            "jugador_actual": self.jugador_actual.nombre,
-            "jugador_actual_id": self.jugador_actual.id,
-            "movs_restantes": self.__movs_restantes__[:],
-            "puntos": puntos,
-            "barra": barra,
-            "salidas": salidas,
-        }
-
-    def resumen_estado(self) -> str:
-        """Devuelve una cadena de texto con el resumen del estado actual."""
-        e = self.estado_dict()
-        return (f"estado={e['estado']} | turno={e['jugador_actual']} "
-                f"(id {e['jugador_actual_id']}) | movs={e['movs_restantes']}")
-
-    def reiniciar(self):
-        """Reinicia el tablero, movimientos y estado a valores iniciales."""
-        self.__tablero__.preparar_posicion_inicial()
-        self.__movs_restantes__.clear()
-        self.__indice_jugador_actual__ = 0
-        self.__estado__ = "inicial"
-        self._set_error(None)
-        self._actualizar_estado()
-
-    def _actualizar_estado(self):
-        """Revisa si el juego ha terminado y actualiza el estado interno."""
-        if self.__tablero__.hay_ganador():
-            self.__estado__ = "terminado"
-        else:
-            if self.__movs_restantes__:
-                self.__estado__ = "en_curso"
+if __name__ == "__main__":
+    unittest.main()

@@ -1,15 +1,13 @@
-"""Estructura del tablero: puntos, barra y salidas (versión simple y vacía)."""
+from backgammon.core.checker import Checker 
 
 PUNTOS = 24
 FICHAS_POR_JUGADOR = 15
-HOME_BOARD_J1 = range(18, 24) 
+HOME_BOARD_J1 = range(18, 24)  
 HOME_BOARD_J2 = range(0, 6)   
 
 
 class Tablero:
     """Tablero con 24 puntos, barra y utilidades de movimiento y fin de juego."""
-
-
 
     def __init__(self):
         """Inicializa un tablero vacío."""
@@ -29,29 +27,33 @@ class Tablero:
             raise ValueError("índice de punto inválido: " + str(i))
 
     def punto(self, i):
-        """Devuelve la lista de fichas en un punto del tablero."""
+        """Devuelve la lista de fichas (objetos Checker) en un punto del tablero."""
         self.validar_indice_punto(i)
         return self.__puntos__[i]
 
-    def colocar_ficha(self, jugador_id, punto):
+    def colocar_ficha(self, jugador_id: int, punto: int):
         """Coloca una ficha de un jugador en un punto."""
         self.validar_indice_punto(punto)
-        self.__puntos__[punto].append(jugador_id)
+        ficha = Checker(jugador_id)
+        self.__puntos__[punto].append(ficha)
         return True
 
-    def quitar_ficha(self, jugador_id, punto):
-        """Quita una ficha de un jugador de un punto."""
+    def quitar_ficha(self, jugador_id: int, punto: int):
+        """Quita UNA ficha de un jugador de un punto."""
         self.validar_indice_punto(punto)
         casilla = self.__puntos__[punto]
-        if jugador_id in casilla:
-            casilla.remove(jugador_id)
-            return True
+        
+        for i, ficha in enumerate(casilla):
+            if ficha.owner_id == jugador_id:
+                casilla.pop(i)
+                return True
         return False
-
+        
     def mover_ficha(self, jugador_id, desde, hasta):
         """Mueve una ficha SIN validación de bloqueo ni de hit. Usar mover_ficha_seguro."""
         self.validar_indice_punto(desde)
         self.validar_indice_punto(hasta)
+
         if self.quitar_ficha(jugador_id, desde):
             self.colocar_ficha(jugador_id, hasta)
             return True
@@ -89,43 +91,55 @@ class Tablero:
                 return pid
         return None
 
-    def _jugador_en_punto(self, jugador_id, punto):
+    def _jugador_en_punto(self, jugador_id: int, punto: int):
         """Verifica si el jugador tiene fichas en el punto."""
         self.validar_indice_punto(punto)
-        return jugador_id in self.__puntos__[punto]
 
-    def _bloqueado_por_oponente(self, jugador_id, punto):
+        return any(f.owner_id == jugador_id for f in self.__puntos__[punto])
+
+    def _bloqueado_por_oponente(self, jugador_id: int, punto: int):
         """Verifica si el punto está bloqueado (dos o más fichas rivales)."""
         self.validar_indice_punto(punto)
         destino = self.__puntos__[punto]
         if not destino:
             return False
-        rival = destino[0] != jugador_id
+
+        rival = destino[0].owner_id != jugador_id
         return rival and len(destino) >= 2
 
-    def mover_ficha_seguro(self, jugador_id, desde, hasta):
+    def mover_ficha_seguro(self, jugador_id: int, desde: int, hasta: int):
         """Mueve una ficha, aplicando reglas de hit/bloqueo, sin reingreso de barra."""
         self.validar_indice_punto(desde)
         self.validar_indice_punto(hasta)
 
-        if jugador_id not in self.__puntos__[desde]:
-            return False
+        if not self._jugador_en_punto(jugador_id, desde):
+             return False
 
         if self._bloqueado_por_oponente(jugador_id, hasta):
             return False
 
         destino = self.__puntos__[hasta]
 
-        if destino and destino[0] != jugador_id and len(destino) == 1:
-            rival_id = destino.pop(0)      
+        if destino and destino[0].owner_id != jugador_id and len(destino) == 1:
+            rival_id = destino[0].owner_id
+            destino.pop(0) # Quitar la ficha rival
             self.enviar_a_barra(rival_id) 
 
-        self.__puntos__[desde].remove(jugador_id)
-        self.__puntos__[hasta].append(jugador_id)
-        return True
+        ficha_a_mover = None
+        for i, f in enumerate(self.__puntos__[desde]):
+            if f.owner_id == jugador_id:
+                ficha_a_mover = self.__puntos__[desde].pop(i)
+                break
+        
+        if ficha_a_mover:
+            self.__puntos__[hasta].append(ficha_a_mover)
+            return True
+            
+        return False
     
     def reingresar_desde_barra(self, jugador_id: int, hasta: int) -> bool:
-        """Si el jugador tiene fichas en barra, intenta reingresar una ficha a 'hasta'."""
+        """ Si el jugador tiene fichas en barra, intenta reingresar una ficha a 'hasta'.
+        """
         self.validar_indice_punto(hasta)
         if self.fichas_en_barra(jugador_id) <= 0:
             return False
@@ -135,42 +149,38 @@ class Tablero:
 
         destino = self.__puntos__[hasta]
 
-        if destino and destino[0] != jugador_id and len(destino) == 1:
-            rival_id = destino.pop(0)
+        if destino and destino[0].owner_id != jugador_id and len(destino) == 1:
+            rival_id = destino[0].owner_id
+            destino.pop(0)
             self.enviar_a_barra(rival_id)
 
+        ficha_reingreso = Checker(jugador_id)
         self.__barra__[jugador_id] = self.fichas_en_barra(jugador_id) - 1
-        self.__puntos__[hasta].append(jugador_id)
+        self.__puntos__[hasta].append(ficha_reingreso)
         return True
-
+        
     def puede_sacar_fichas(self, jugador_id: int) -> bool:
         """
-        Verifica si el jugador tiene todas sus fichas restantes en su home board """
-        fichas_fuera_home_board = 0
+        Verifica si el jugador tiene todas sus fichas restantes en su home board.
+        """
 
         if jugador_id % 2 != 0: 
-            home_board = HOME_BOARD_J1
             puntos_a_revisar = range(0, 18) 
         else: 
-            home_board = HOME_BOARD_J2
             puntos_a_revisar = range(6, 24)
 
         if self.fichas_en_barra(jugador_id) > 0:
             return False
 
         for i in puntos_a_revisar:
-            if jugador_id in self.__puntos__[i]:
-                fichas_fuera_home_board += 1
+            if any(f.owner_id == jugador_id for f in self.__puntos__[i]):
                 return False 
-
+        
         return True
 
     def sacar_ficha(self, jugador_id: int, desde: int) -> bool:
         """Intenta sacar una ficha (bearing off) desde 'desde'."""
         if not self.puede_sacar_fichas(jugador_id):
-            return False
-
-        if jugador_id not in self.punto(desde):
             return False
 
         if self.quitar_ficha(jugador_id, desde):
