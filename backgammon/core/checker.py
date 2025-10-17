@@ -13,14 +13,14 @@ class Checker:
         Devuelve:
             None
         """
-        self._pid_ = jugador_id 
+        self.__pid__ = jugador_id 
         
     @property
     def owner_id(self) -> int:
         """
         Devuelve el ID del jugador propietario de la ficha.
         """
-        return self._pid_
+        return self.__pid__
 
     def __eq__(self, other):
         """Permite comparar si dos Checkers son del mismo propietario (por ID)."""
@@ -32,4 +32,4 @@ class Checker:
 
     def __repr__(self) -> str:
         """Representación de string para debug."""
-        return f"Checker(PID={self._pid_})"
+        return f"Checker(PID={self.__pid__})"

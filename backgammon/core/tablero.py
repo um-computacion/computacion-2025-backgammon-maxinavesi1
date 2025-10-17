@@ -1,8 +1,10 @@
+"""Estructura del tablero: puntos, barra y salidas."""
+
 from backgammon.core.checker import Checker 
 
 PUNTOS = 24
 FICHAS_POR_JUGADOR = 15
-HOME_BOARD_J1 = range(18, 24)  
+HOME_BOARD_J1 = range(18, 24)
 HOME_BOARD_J2 = range(0, 6)   
 
 
@@ -53,7 +55,7 @@ class Tablero:
         """Mueve una ficha SIN validación de bloqueo ni de hit. Usar mover_ficha_seguro."""
         self.validar_indice_punto(desde)
         self.validar_indice_punto(hasta)
-
+        
         if self.quitar_ficha(jugador_id, desde):
             self.colocar_ficha(jugador_id, hasta)
             return True
@@ -94,7 +96,6 @@ class Tablero:
     def _jugador_en_punto(self, jugador_id: int, punto: int):
         """Verifica si el jugador tiene fichas en el punto."""
         self.validar_indice_punto(punto)
-
         return any(f.owner_id == jugador_id for f in self.__puntos__[punto])
 
     def _bloqueado_por_oponente(self, jugador_id: int, punto: int):
@@ -103,7 +104,7 @@ class Tablero:
         destino = self.__puntos__[punto]
         if not destino:
             return False
-
+            
         rival = destino[0].owner_id != jugador_id
         return rival and len(destino) >= 2
 
@@ -122,7 +123,7 @@ class Tablero:
 
         if destino and destino[0].owner_id != jugador_id and len(destino) == 1:
             rival_id = destino[0].owner_id
-            destino.pop(0) # Quitar la ficha rival
+            destino.pop(0)
             self.enviar_a_barra(rival_id) 
 
         ficha_a_mover = None
@@ -138,8 +139,7 @@ class Tablero:
         return False
     
     def reingresar_desde_barra(self, jugador_id: int, hasta: int) -> bool:
-        """ Si el jugador tiene fichas en barra, intenta reingresar una ficha a 'hasta'.
-        """
+        """ Si el jugador tiene fichas en barra, intenta reingresar una ficha a 'hasta'. """
         self.validar_indice_punto(hasta)
         if self.fichas_en_barra(jugador_id) <= 0:
             return False
@@ -160,15 +160,13 @@ class Tablero:
         return True
         
     def puede_sacar_fichas(self, jugador_id: int) -> bool:
-        """
-        Verifica si el jugador tiene todas sus fichas restantes en su home board.
-        """
-
-        if jugador_id % 2 != 0: 
+        """Verifica si el jugador tiene todas sus fichas restantes en su home board."""
+        
+        if jugador_id % 2 != 0:
             puntos_a_revisar = range(0, 18) 
-        else: 
+        else:
             puntos_a_revisar = range(6, 24)
-
+        
         if self.fichas_en_barra(jugador_id) > 0:
             return False
 
@@ -182,7 +180,7 @@ class Tablero:
         """Intenta sacar una ficha (bearing off) desde 'desde'."""
         if not self.puede_sacar_fichas(jugador_id):
             return False
-
+            
         if self.quitar_ficha(jugador_id, desde):
             self.registrar_salida(jugador_id)
             return True
