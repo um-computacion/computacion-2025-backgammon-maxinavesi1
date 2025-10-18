@@ -28,7 +28,7 @@ def main():
     j1 = Jugador("Blancas")
     j2 = Jugador("Negras")
     juego = Juego(j1, j2)
-
+    juego.reiniciar()
     i = 0
     while i < len(args):
         cmd = args[i]
