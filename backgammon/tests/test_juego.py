@@ -3,6 +3,7 @@ from backgammon.core.juego import Juego
 from backgammon.core.jugador import Jugador
 from backgammon.core.tablero import PUNTOS, FICHAS_POR_JUGADOR
 from backgammon.core.tablero import Tablero 
+from backgammon.core.tablero import Checker
 
 class _TableroFalso:
     def __init__(self, ganador_id):
@@ -319,9 +320,9 @@ class PruebasJuego(unittest.TestCase):
     def test_mover_ficha_falla_por_bloqueo_registra_error(self):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
-        g.tablero.colocar_ficha(pid, 0) 
         rival = 2 if pid == 1 else 1
-        g.tablero.__puntos__[4] = [rival, rival] 
+        g.tablero.colocar_ficha(pid, 0)
+        g.tablero.__puntos__[4] = [Checker(rival), Checker(rival)] 
         g.__movs_restantes__ = [4]
         ok = g.mover_ficha(0, 4)
         self.assertFalse(ok)
@@ -363,8 +364,8 @@ class PruebasJuego(unittest.TestCase):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
         rival = 2 if pid == 1 else 1
-        g.tablero.colocar_ficha(pid, 0) 
-        g.tablero.__puntos__[4] = [rival, rival]
+        g.tablero.colocar_ficha(pid, 0)
+        g.tablero.__puntos__[4] = [Checker(rival), Checker(rival)] 
         g.__movs_restantes__ = [4]
         ok = g.aplicar_movimiento(0, 4)
         self.assertFalse(ok)
@@ -388,8 +389,8 @@ class PruebasJuego(unittest.TestCase):
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
         rival = 2 if pid == 1 else 1
-        g.tablero.colocar_ficha(pid, 0) 
-        g.tablero.__puntos__[4] = [rival, rival]
+        g.tablero.colocar_ficha(pid, 0)
+        g.tablero.__puntos__[4] = [Checker(rival), Checker(rival)]
         g.__movs_restantes__ = [4]
         ok = g.mover_ficha(0, 4)
         self.assertFalse(ok)

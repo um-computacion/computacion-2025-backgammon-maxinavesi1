@@ -263,7 +263,7 @@ class Juego:
         self.__tablero__.posicion_inicial_estandar(j1_id, j2_id)
         self.__movs_restantes__.clear()
         self.__indice_jugador_actual__ = 0
-        self.__estado__ = "inicial" 
+        self.__estado__ = "inicial"
         self._set_error(None)
         self._actualizar_estado()
 

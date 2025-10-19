@@ -18,10 +18,30 @@ class Tablero:
         self.__barra__ = {}
 
     def preparar_posicion_inicial(self):
-        """Deja el tablero en estado inicial VACÍO (los tests colocan fichas)."""
+        """Limpia todos los puntos, la barra y las salidas del tablero."""
         self.__puntos__ = [[] for _ in range(PUNTOS)]
         self.__salidas__ = {}
         self.__barra__ = {}
+
+    def posicion_inicial_estandar(self, j1_id: int, j2_id: int):
+        """
+        Configura el tablero con la distribución de fichas inicial estándar de Backgammon
+        """
+        self.preparar_posicion_inicial() 
+        posiciones = [
+            (j1_id, 23, 2), 
+            (j1_id, 12, 5), 
+            (j1_id, 7, 3),  
+            (j1_id, 5, 5),  
+            (j2_id, 0, 2),  
+            (j2_id, 11, 5), 
+            (j2_id, 16, 3), 
+            (j2_id, 18, 5)  
+        ]
+
+        for pid, punto, cantidad in posiciones:
+            for _ in range(cantidad):
+                self.colocar_ficha(pid, punto)
 
     def validar_indice_punto(self, i):
         """Valida si el índice de punto está dentro del rango 0..23."""
