@@ -46,11 +46,17 @@ jobs:
 
       - name: Run Pylint and generate text report
         run: |
-          # 1. Generar el reporte de texto, eliminando códigos de color con ansi2txt
-          #    La salida se guarda en pylint_report.txt
-          pylint backgammon --rcfile=.pylintrc -f colorized | ansi2txt > pylint_report.txt
+          # 1. Asegurarse de que el archivo de reporte de Pylint exista y esté vacío si falla la ejecución
+          touch pylint_report.txt
           
-          # 2. Generar el reporte XML (necesario para SonarCloud/CodeClimate, aunque no se usa aquí)
+          # 2. Ejecutar Pylint, canalizando la salida directamente al archivo (limpio de colores)
+          pylint backgammon --rcfile=.pylintrc -f colorized | ansi2txt > pylint_output.txt
+          
+          # 3. Mover el contenido real al archivo que se usa para el reporte, 
+          #    solo si pylint_output.txt tiene contenido relevante.
+          cat pylint_output.txt > pylint_report.txt
+
+          # Generar el reporte XML (necesario para SonarCloud/CodeClimate)
           pylint backgammon --rcfile=.pylintrc --output-format=pylintxml > pylint.xml
         continue-on-error: true
 
