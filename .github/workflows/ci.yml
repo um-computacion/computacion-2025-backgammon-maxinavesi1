@@ -31,17 +31,28 @@ jobs:
           pip install -r requirements.txt
           pip install pylint
 
+      - name: Install ansi2txt for clean reports
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends moreutils
+        shell: bash
+
       - name: Run tests and generate coverage report
         run: |
+          # El comando de cobertura usa el archivo .coveragerc
           coverage run -m unittest discover
           coverage xml -o cobertura.xml
           coverage report -m > coverage_report.txt
 
-      - name: Run Pylint and generate report
+      - name: Run Pylint and generate text report
         run: |
-          # Lint de todo el paquete; no fallar el job si hay issues
-          pylint backgammon --rcfile=.pylintrc -f text --exit-zero \
-            | sed 's/\x1b\[[0-9;]*m//g' > pylint_report.txt
+          # 1. Generar el reporte de texto, eliminando códigos de color con ansi2txt
+          #    La salida se guarda en pylint_report.txt
+          pylint backgammon --rcfile=.pylintrc -f colorized | ansi2txt > pylint_report.txt
+          
+          # 2. Generar el reporte XML (necesario para SonarCloud/CodeClimate, aunque no se usa aquí)
+          pylint backgammon --rcfile=.pylintrc --output-format=pylintxml > pylint.xml
+        continue-on-error: true
 
       - name: Generate reports file
         run: |
@@ -49,6 +60,7 @@ jobs:
           import os
           def read_file(filepath):
               if not os.path.exists(filepath):
+                  # Crear un mensaje de error si el archivo no existe (aunque ya lo verificamos)
                   return f"Error: Report file not found at {filepath}"
               with open(filepath, "r", encoding="utf-8") as f:
                   return f.read()
@@ -70,7 +82,6 @@ jobs:
           python generate_reports.py
 
       - name: Create Pull Request for reports
-        if: github.ref == 'refs/heads/main'
         uses: peter-evans/create-pull-request@v5
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -86,3 +97,5 @@ jobs:
           delete-branch: true
           add-paths: |
             REPORTS.md
+            cobertura.xml
+            pylint.xml

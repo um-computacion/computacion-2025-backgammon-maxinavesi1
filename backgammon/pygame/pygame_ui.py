@@ -16,7 +16,6 @@ Clicks:
 from __future__ import annotations
 import sys
 import pygame
-
 from backgammon.core.juego import Juego
 from backgammon.core.jugador import Jugador
 from backgammon.core.tablero import PUNTOS
