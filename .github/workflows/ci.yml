@@ -60,17 +60,27 @@ jobs:
           import os
           def read_file(filepath):
               if not os.path.exists(filepath):
-                  # Crear un mensaje de error si el archivo no existe (aunque ya lo verificamos)
-                  return f"Error: Report file not found at {filepath}"
-              with open(filepath, "r", encoding="utf-8") as f:
-                  return f.read()
+                  # Retorna un mensaje de error si el reporte no existe
+                  return f"File not generated at {filepath}"
+              try:
+                  with open(filepath, "r", encoding="utf-8") as f:
+                      return f.read()
+              except Exception as e:
+                  return f"Error reading file {filepath}: {e}"
+                  
           coverage_report = read_file("coverage_report.txt")
           pylint_report = read_file("pylint_report.txt")
+
           reports_content = f"""# Automated Reports
+          
+          ## CI Status
+          **Commit:** ${{ github.sha }}
+          
           ## Coverage Report
           ```text
           {coverage_report}
           ```
+          
           ## Pylint Report
           ```text
           {pylint_report}
