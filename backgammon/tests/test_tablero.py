@@ -224,7 +224,6 @@ class PruebasTableroExtra(unittest.TestCase):
         self.assertEqual(t.fichas_en_barra(rival), 1)
     
     def test_posicion_inicial_estandar_coloca_fichas_correctamente(self):
-        """Verifica que la posición inicial cumple con la distribución 2/5/3/5."""
         t = Tablero()
         j1_id = 1
         j2_id = 2
