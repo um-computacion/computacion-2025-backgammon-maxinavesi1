@@ -45,7 +45,7 @@ jobs:
 
       - name: Run Pylint and generate text report
         run: |
-          # Usamos -f text para evitar problemas de codificación y asegurar la salida de texto
+          # Generar el reporte de texto estándar (eliminando la dependencia de ansi2txt para esta salida)
           pylint backgammon --rcfile=.pylintrc -f text > pylint_report.txt
 
           # Generar el reporte XML (necesario para SonarCloud/CodeClimate, aunque no se vea en el .md)
