@@ -46,18 +46,16 @@ jobs:
 
       - name: Run Pylint and generate text report
         run: |
-          # 1. Asegurarse de que el archivo de reporte de Pylint exista y esté vacío si falla la ejecución
-          touch pylint_report.txt
-          
-          # 2. Ejecutar Pylint, canalizando la salida directamente al archivo (limpio de colores)
+          # 1. Ejecutar Pylint, canalizando la salida directamente al archivo (limpio de colores)
           pylint backgammon --rcfile=.pylintrc -f colorized | ansi2txt > pylint_output.txt
           
-          # 3. Mover el contenido real al archivo que se usa para el reporte, 
-          #    solo si pylint_output.txt tiene contenido relevante.
+          # 2. Mover el contenido real al archivo de texto para el reporte.
           cat pylint_output.txt > pylint_report.txt
 
-          # Generar el reporte XML (necesario para SonarCloud/CodeClimate)
-          pylint backgammon --rcfile=.pylintrc --output-format=pylintxml > pylint.xml
+          # 3. CRUCIAL: Generar el reporte XML. Usamos '|| true' para asegurar que el archivo de salida se cree 
+          #    incluso si Pylint falla y retorna un código de error (siempre y cuando la opción continue-on-error esté en su sitio).
+          pylint backgammon --rcfile=.pylintrc --output-format=pylintxml > pylint.xml || true 
+          
         continue-on-error: true
 
       - name: Generate reports file
@@ -104,5 +102,5 @@ jobs:
           git config --global user.email 'github-actions@github.com'
           git checkout ${{ github.head_ref }} || git checkout ${{ github.ref }} # Vuelve a la rama original
           
-          git add REPORTS.md pylint.xml cobertura.xml
+          git add REPORTS.md cobertura.xml
           git commit -m "docs: Update Automated CI Reports [skip ci]" || echo "No changes to commit"
