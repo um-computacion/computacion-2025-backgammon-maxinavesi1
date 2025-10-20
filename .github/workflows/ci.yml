@@ -1,4 +1,4 @@
-name: CI with Coverage and SonarCloud
+name: CI with Coverage
 on:
   push:
     branches:
@@ -11,7 +11,7 @@ jobs:
   build-and-analyze:
     runs-on: ubuntu-latest
     permissions:
-      contents: write
+      contents: write 
       pull-requests: write
     steps:
       - name: Checkout code
@@ -31,40 +31,29 @@ jobs:
           pip install -r requirements.txt
           pip install pylint
 
-      - name: Install ansi2txt for clean reports
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends moreutils
-        shell: bash
-
       - name: Run tests and generate coverage report
         run: |
-          # El comando de cobertura usa el archivo .coveragerc
           coverage run -m unittest discover
           coverage xml -o cobertura.xml
           coverage report -m > coverage_report.txt
 
       - name: Run Pylint and generate text report
         run: |
-          # 1. Ejecutar Pylint, canalizando la salida directamente al archivo (limpio de colores)
-          pylint backgammon --rcfile=.pylintrc -f colorized | ansi2txt > pylint_output.txt
+          # Generar el reporte de texto (formato estandarizado 'text')
+          pylint backgammon --rcfile=.pylintrc -f text > pylint_report.txt
           
-          # 2. Mover el contenido real al archivo de texto para el reporte.
-          cat pylint_output.txt > pylint_report.txt
-
-          # 3. CRUCIAL: Generar el reporte XML. Usamos '|| true' para asegurar que el archivo de salida se cree 
-          #    incluso si Pylint falla y retorna un código de error (siempre y cuando la opción continue-on-error esté en su sitio).
+          # Generar el reporte XML para CodeClimate (el || true asegura que el paso no falle si Pylint no lo genera)
           pylint backgammon --rcfile=.pylintrc --output-format=pylintxml > pylint.xml || true 
-          
+        
         continue-on-error: true
 
       - name: Generate reports file
         run: |
+          # Script para generar REPORTS.md (asumiendo que el contenido es el que ya preparamos)
           cat << 'EOF' > generate_reports.py
           import os
           def read_file(filepath):
               if not os.path.exists(filepath):
-                  # Retorna un mensaje de error si el reporte no existe
                   return f"File not generated at {filepath}"
               try:
                   with open(filepath, "r", encoding="utf-8") as f:
@@ -74,17 +63,11 @@ jobs:
                   
           coverage_report = read_file("coverage_report.txt")
           pylint_report = read_file("pylint_report.txt")
-
           reports_content = f"""# Automated Reports
-          
-          ## CI Status
-          **Commit:** ${{ github.sha }}
-          
           ## Coverage Report
           ```text
           {coverage_report}
           ```
-          
           ## Pylint Report
           ```text
           {pylint_report}
@@ -96,11 +79,17 @@ jobs:
           python generate_reports.py
 
       - name: Commit and Push Reports
-        if: always() # Ejecutar siempre, incluso si los tests fallan
+        if: success() || failure()
         run: |
-          git config --global user.name 'GitHub Actions Report'
-          git config --global user.email 'github-actions@github.com'
-          git checkout ${{ github.head_ref }} || git checkout ${{ github.ref }} # Vuelve a la rama original
+          git config user.name 'GitHub Actions Report'
+          git config user.email 'github-actions@github.com'
           
-          git add REPORTS.md cobertura.xml
+          # Vuelve a la rama original
+          git checkout ${{ github.head_ref }} || git checkout ${{ github.ref }} 
+          
+          # CRUCIAL: Solo añade REPORTS.md y cobertura.xml
+          git add REPORTS.md cobertura.xml 
+          
           git commit -m "docs: Update Automated CI Reports [skip ci]" || echo "No changes to commit"
+          
+          git push
