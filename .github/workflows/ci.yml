@@ -84,9 +84,12 @@ jobs:
           git config user.name 'GitHub Actions Report'
           git config user.email 'github-actions@github.com'
           
-          # Añadir todos los reportes finales
-          git add REPORTS.md cobertura.xml pylint.xml
+          # Vuelve a la rama original
+          git checkout ${{ github.head_ref }} || git checkout ${{ github.ref }} 
           
-          # Confirmar y pushear los cambios a la rama actual
+          # CRUCIAL: Solo añade REPORTS.md y cobertura.xml
+          git add REPORTS.md cobertura.xml 
+          
           git commit -m "docs: Update Automated CI Reports [skip ci]" || echo "No changes to commit"
+          
           git push
