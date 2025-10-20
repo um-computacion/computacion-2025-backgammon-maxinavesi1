@@ -60,7 +60,7 @@ jobs:
                       return f.read()
               except Exception as e:
                   return f"Error reading file {filepath}: {e}"
-                  
+              
           coverage_report = read_file("coverage_report.txt")
           pylint_report = read_file("pylint_report.txt")
           reports_content = f"""# Automated Reports

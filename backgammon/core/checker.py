@@ -14,7 +14,7 @@ class Checker:
             None
         """
         self.__pid__ = jugador_id 
-        
+        #d
     @property
     def owner_id(self) -> int:
         """
