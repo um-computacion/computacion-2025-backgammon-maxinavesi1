@@ -1,8 +1,7 @@
+"""CLI para el juego de Backgammon."""
 import sys
 from backgammon.core.juego import Juego
 from backgammon.core.jugador import Jugador
-
-
 
 
 def _ayuda():
@@ -12,14 +11,16 @@ def _ayuda():
     print("  --tirar                     # tirar los dados")
     print("  --movs                      # ver movimientos disponibles")
     print("  --poner <p>                 # colocar ficha del jugador actual en el punto p")
-    print("  --mover <desde> <hasta>     # mover ficha si la distancia está en los movimientos")
+    print("  --mover <desde> <hasta>     # mover ficha si la distancia está en los movs")
     print("  --semilla <n>               # fija semilla para tiradas reproducibles")
     print("  --ayuda | -h                # mostrar esta ayuda")
     print("  --estado                    # ver un resumen del estado actual")
     print("  --dump-estado               # volcar el estado completo (debug)")
     print("  --demo                      # cargar posición de práctica (no oficial)")
 
+
 def main():
+    """Función principal de la CLI."""
     args = sys.argv[1:]
     if not args or args[0] in ("--ayuda", "-h"):
         _ayuda()
@@ -35,11 +36,13 @@ def main():
 
         if cmd == "--semilla":
             if i + 1 >= len(args):
-                print("Falta <n> para --semilla"); return
+                print("Falta <n> para --semilla")
+                return
             try:
                 n = int(args[i + 1])
             except ValueError:
-                print("Semilla inválida:", args[i + 1]); return
+                print("Semilla inválida:", args[i + 1])
+                return
             juego.usar_semilla(n)
             print("Semilla fija en", n)
             i += 2
@@ -58,24 +61,30 @@ def main():
 
         if cmd == "--poner":
             if i + 1 >= len(args):
-                print("Falta <p> para --poner"); return
+                print("Falta <p> para --poner")
+                return
             try:
                 p = int(args[i + 1])
             except ValueError:
-                print("Punto inválido:", args[i + 1]); return
+                print("Punto inválido:", args[i + 1])
+                return
             ok = juego.colocar_ficha_en(p)
-            print(f"Se colocó una ficha en {p}" if ok else "No se pudo colocar la ficha")
+            msg = f"Se colocó una ficha en {p}" if ok else "No se pudo colocar la ficha"
+            print(msg)
             i += 2
             continue
 
         if cmd == "--mover":
             if i + 2 >= len(args):
-                print("Faltan <desde> <hasta> para --mover"); return
+                print("Faltan <desde> <hasta> para --mover")
+                return
             try:
-                desde = int(args[i + 1]); hasta = int(args[i + 2])
+                desde = int(args[i + 1])
+                hasta = int(args[i + 2])
             except ValueError:
-                print("Parámetros inválidos. Ej: --mover 0 3 o --mover 22 24"); return
-            
+                print("Parámetros inválidos. Ej: --mover 0 3 o --mover 22 24")
+                return
+
             ok = juego.mover_ficha(desde, hasta)
             if ok:
                 print("Movimiento: OK")
@@ -85,7 +94,6 @@ def main():
             print("Movs restantes:", juego.movimientos_disponibles())
             i += 3
             continue
-
 
         if cmd == "--estado":
             print(juego.resumen_estado())
@@ -106,11 +114,11 @@ def main():
                 print("salidas:", est["salidas"])
             i += 1
             continue
-        
+
         if cmd == "--demo":
             juego.reiniciar()
             pid_a = juego.jugador_actual.id
-            pid_b = j2.id             
+            pid_b = j2.id
             juego.tablero.colocar_ficha(pid_a, 0)
             juego.tablero.colocar_ficha(pid_a, 0)
             juego.tablero.colocar_ficha(pid_b, 23)
@@ -122,6 +130,7 @@ def main():
         print("Comando no reconocido:", cmd)
         _ayuda()
         return
+
 
 if __name__ == "__main__":
     main()

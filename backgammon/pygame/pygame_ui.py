@@ -11,9 +11,8 @@ Teclas:
 
 Clicks:
   • Click en un punto para seleccionarlo (origen).
-  • Click en otro punto o en la barra de salida (laterales) para intentar mover/sacar (destino).
+  • Click en otro punto o en la barra de salida (laterales) para intentar mover/sacar.
 """
-from __future__ import annotations
 import sys
 import pygame
 from backgammon.core.juego import Juego
@@ -27,28 +26,28 @@ FPS = 60
 MARGEN_X = 40
 MARGEN_Y = 40
 
-BG_COLOR = (245, 239, 230)      
-BOARD_COLOR = (230, 220, 200)   
+BG_COLOR = (245, 239, 230)
+BOARD_COLOR = (230, 220, 200)
 TRI_A = (170, 120, 90)
 TRI_B = (210, 170, 130)
 LINE = (60, 60, 60)
 
 COLOR_TEXTO = (25, 25, 25)
-COLOR_J1 = (245, 245, 245)     
-COLOR_J2 = (30, 30, 30)         
-COLOR_SEL = (30, 30, 30)       
-COLOR_HINT = (90, 180, 90)      
+COLOR_J1 = (245, 245, 245)
+COLOR_J2 = (30, 30, 30)
+COLOR_HINT = (90, 180, 90)
 
-MAX_VISIBLE_STACK = 5   
-OUT_BAR_W = 60 
-OUT_BAR_X_J1 = ANCHO - MARGEN_X - OUT_BAR_W 
-OUT_BAR_X_J2 = MARGEN_X 
+MAX_VISIBLE_STACK = 5
+OUT_BAR_W = 60
+OUT_BAR_X_J1 = ANCHO - MARGEN_X - OUT_BAR_W
+OUT_BAR_X_J2 = MARGEN_X
 
 _BOARD_RECT: pygame.Rect | None = None
 
+
 def _board_rect() -> pygame.Rect:
     """Calcula y retorna el rectángulo del tablero interno con márgenes."""
-    global _BOARD_RECT
+    global _BOARD_RECT  # pylint: disable=global-statement
     rect = pygame.Rect(
         MARGEN_X + OUT_BAR_W,
         MARGEN_Y + 20,
@@ -61,15 +60,14 @@ def _board_rect() -> pygame.Rect:
 
 def _tri_w() -> float:
     """Calcula el ancho de cada triángulo (punto)."""
-    return _BOARD_RECT.width / 12.0  
+    return _BOARD_RECT.width / 12.0
 
 
 def _point_index_to_display(idx: int) -> tuple[str, int]:
     """Mapea el índice lógico (0-23) al cuadrante y columna visual (0-11)."""
     if 0 <= idx <= 11:
-        return 'top', 11 - idx       
-    else:
-        return 'bottom', idx - 12     
+        return 'top', 11 - idx
+    return 'bottom', idx - 12
 
 
 def _point_center(idx: int) -> tuple[int, int]:
@@ -82,8 +80,9 @@ def _point_center(idx: int) -> tuple[int, int]:
 
 def _dibujar_triangulos(surface: pygame.Surface) -> None:
     """Dibuja los 24 triángulos (puntos) del tablero."""
-    if _BOARD_RECT is None: return
-        
+    if _BOARD_RECT is None:
+        return
+
     for col_vis in range(12):
         x0 = _BOARD_RECT.left + col_vis * _tri_w()
         x1 = x0 + _tri_w()
@@ -91,21 +90,27 @@ def _dibujar_triangulos(surface: pygame.Surface) -> None:
 
         tip_y = _BOARD_RECT.top + _BOARD_RECT.height * 0.42
         pts = [(x0, _BOARD_RECT.top), (x1, _BOARD_RECT.top), (xm, tip_y)]
-        pygame.draw.polygon(surface, TRI_A if col_vis % 2 == 0 else TRI_B, pts)
+        color = TRI_A if col_vis % 2 == 0 else TRI_B
+        pygame.draw.polygon(surface, color, pts)
 
         tip_y = _BOARD_RECT.bottom - _BOARD_RECT.height * 0.42
         pts = [(x0, _BOARD_RECT.bottom), (x1, _BOARD_RECT.bottom), (xm, tip_y)]
-        pygame.draw.polygon(surface, TRI_B if col_vis % 2 == 0 else TRI_A, pts)
+        color = TRI_B if col_vis % 2 == 0 else TRI_A
+        pygame.draw.polygon(surface, color, pts)
 
 
 def _dibujar_marco_y_labels(surface: pygame.Surface, font: pygame.font.Font) -> None:
     """Dibuja el marco y la numeración 12..1 / 13..24."""
-    if _BOARD_RECT is None: return
-        
+    if _BOARD_RECT is None:
+        return
+
     pygame.draw.rect(surface, BOARD_COLOR, _BOARD_RECT, border_radius=12)
     pygame.draw.rect(surface, LINE, _BOARD_RECT, 2, border_radius=12)
-    pygame.draw.line(surface, LINE, (_BOARD_RECT.left, _BOARD_RECT.centery),
-                     (_BOARD_RECT.right, _BOARD_RECT.centery), 1)
+    pygame.draw.line(
+        surface, LINE,
+        (_BOARD_RECT.left, _BOARD_RECT.centery),
+        (_BOARD_RECT.right, _BOARD_RECT.centery), 1
+    )
 
     triw = _tri_w()
     top_labels = [str(i) for i in range(12, 0, -1)]
@@ -114,6 +119,7 @@ def _dibujar_marco_y_labels(surface: pygame.Surface, font: pygame.font.Font) -> 
         y = _BOARD_RECT.top - 14
         img = font.render(lbl, True, COLOR_TEXTO)
         surface.blit(img, img.get_rect(center=(x, y)))
+
     bottom_labels = [str(i) for i in range(13, 25)]
     for col_vis, lbl in enumerate(bottom_labels):
         x = int(_BOARD_RECT.left + col_vis * triw + triw / 2)
@@ -122,21 +128,32 @@ def _dibujar_marco_y_labels(surface: pygame.Surface, font: pygame.font.Font) -> 
         surface.blit(img, img.get_rect(center=(x, y)))
 
 
-def _draw_checker(surface: pygame.Surface, center: tuple[int, int], radius: int,
-                  color_rgb: tuple[int, int, int], label: int | None,
-                  font: pygame.font.Font) -> None:
+def _draw_checker(
+    surface: pygame.Surface,
+    center: tuple[int, int],
+    radius: int,
+    color_rgb: tuple[int, int, int],
+    label: int | None,
+    font: pygame.font.Font
+) -> None:
     """Dibuja una ficha individual con su borde y etiqueta de stack si aplica."""
     pygame.draw.circle(surface, color_rgb, center, radius)
     pygame.draw.circle(surface, LINE, center, radius, 1)
     if label:
-        txt = font.render(str(label), True, LINE if color_rgb == COLOR_J1 else COLOR_J1)
+        label_color = LINE if color_rgb == COLOR_J1 else COLOR_J1
+        txt = font.render(str(label), True, label_color)
         surface.blit(txt, txt.get_rect(center=center))
 
 
-def _dibujar_fichas(surface: pygame.Surface, juego: Juego, font: pygame.font.Font) -> None:
+def _dibujar_fichas(
+    surface: pygame.Surface,
+    juego: Juego,
+    font: pygame.font.Font
+) -> None:
     """Dibuja las fichas apiladas en los puntos del tablero."""
-    if _BOARD_RECT is None: return
-        
+    if _BOARD_RECT is None:
+        return
+
     triw = _tri_w()
     radius = int(triw * 0.38)
     radius = max(12, min(radius, 22))
@@ -144,9 +161,10 @@ def _dibujar_fichas(surface: pygame.Surface, juego: Juego, font: pygame.font.Fon
     step = radius * 2 + vgap
 
     t = juego.tablero
-    j1_id = juego.jugadores[0].id  
+    j1_id = juego.jugadores[0].id
 
-    def color(pid): return COLOR_J1 if pid == j1_id else COLOR_J2
+    def color(pid):
+        return COLOR_J1 if pid == j1_id else COLOR_J2
 
     for idx in range(PUNTOS):
         row, col_vis = _point_index_to_display(idx)
@@ -157,54 +175,78 @@ def _dibujar_fichas(surface: pygame.Surface, juego: Juego, font: pygame.font.Fon
             continue
 
         visibles = min(len(pila), MAX_VISIBLE_STACK)
-        extras = max(0, len(pila) - (MAX_VISIBLE_STACK - 1)) if len(pila) > MAX_VISIBLE_STACK else 0
+        extras = 0
+        if len(pila) > MAX_VISIBLE_STACK:
+            extras = max(0, len(pila) - (MAX_VISIBLE_STACK - 1))
 
         if row == 'top':
             cy = int(_BOARD_RECT.top + radius + 6)
             for i in range(visibles):
                 pid = pila[i].owner_id
                 lbl = extras if (extras and i == visibles - 1) else None
-                _draw_checker(surface, (cx, cy + i * step), radius, color(pid), lbl, font)
+                _draw_checker(
+                    surface, (cx, cy + i * step), radius, color(pid), lbl, font
+                )
         else:
             cy = int(_BOARD_RECT.bottom - radius - 6)
             for i in range(visibles):
                 pid = pila[i].owner_id
                 lbl = extras if (extras and i == visibles - 1) else None
-                _draw_checker(surface, (cx, cy - i * step), radius, color(pid), lbl, font)
+                _draw_checker(
+                    surface, (cx, cy - i * step), radius, color(pid), lbl, font
+                )
 
 
-def _dibujar_barra(surface: pygame.Surface, juego: Juego, font: pygame.font.Font) -> None:
+def _dibujar_barra(
+    surface: pygame.Surface,
+    juego: Juego,
+    font: pygame.font.Font
+) -> None:
     """Muestra cuántas fichas tiene cada jugador en la barra central (Bar)."""
-    if _BOARD_RECT is None: return
-        
+    if _BOARD_RECT is None:
+        return
+
     j1_id = juego.jugadores[0].id
     j2_id = juego.jugadores[1].id
-    
+
     b1 = juego.tablero.fichas_en_barra(j1_id)
     b2 = juego.tablero.fichas_en_barra(j2_id)
 
-    bar_rect = pygame.Rect(_BOARD_RECT.centerx - 10, _BOARD_RECT.top, 20, _BOARD_RECT.height)
+    bar_x = _BOARD_RECT.centerx - 10
+    bar_rect = pygame.Rect(bar_x, _BOARD_RECT.top, 20, _BOARD_RECT.height)
+
     if b1 > 0:
         cy_start = _BOARD_RECT.top + 30
         cy_step = 25
-        txt = font.render(str(b1), True, COLOR_TEXTO if COLOR_J1 == (245, 245, 245) else COLOR_J1)
+        txt_color = COLOR_TEXTO if COLOR_J1 == (245, 245, 245) else COLOR_J1
+        txt = font.render(str(b1), True, txt_color)
         for i in range(min(b1, 5)):
-             _draw_checker(surface, (bar_rect.centerx, cy_start + i * cy_step), 10, COLOR_J1, None, font)
-        surface.blit(txt, (bar_rect.centerx - 10, cy_start + min(b1, 5) * cy_step)) 
+            cy = cy_start + i * cy_step
+            _draw_checker(surface, (bar_rect.centerx, cy), 10, COLOR_J1, None, font)
+        txt_pos_y = cy_start + min(b1, 5) * cy_step
+        surface.blit(txt, (bar_rect.centerx - 10, txt_pos_y))
 
     if b2 > 0:
         cy_start = _BOARD_RECT.bottom - 30
         cy_step = 25
-        txt = font.render(str(b2), True, COLOR_TEXTO if COLOR_J2 == (30, 30, 30) else COLOR_J2)
+        txt_color = COLOR_TEXTO if COLOR_J2 == (30, 30, 30) else COLOR_J2
+        txt = font.render(str(b2), True, txt_color)
         for i in range(min(b2, 5)):
-             _draw_checker(surface, (bar_rect.centerx, cy_start - i * cy_step), 10, COLOR_J2, None, font)
-        surface.blit(txt, (bar_rect.centerx - 10, cy_start - min(b2, 5) * cy_step - 20)) 
+            cy = cy_start - i * cy_step
+            _draw_checker(surface, (bar_rect.centerx, cy), 10, COLOR_J2, None, font)
+        txt_pos_y = cy_start - min(b2, 5) * cy_step - 20
+        surface.blit(txt, (bar_rect.centerx - 10, txt_pos_y))
 
 
-def _draw_bearing_off_bar(surface: pygame.Surface, juego: Juego, font: pygame.font.Font) -> None:
+def _draw_bearing_off_bar(
+    surface: pygame.Surface,
+    juego: Juego,
+    font: pygame.font.Font
+) -> None:
     """Dibuja las barras laterales de Bearing Off (Salida) y el conteo."""
-    if _BOARD_RECT is None: return
-        
+    if _BOARD_RECT is None:
+        return
+
     j1_id = juego.jugadores[0].id
     j2_id = juego.jugadores[1].id
 
@@ -215,7 +257,8 @@ def _draw_bearing_off_bar(surface: pygame.Surface, juego: Juego, font: pygame.fo
 
     if j1_salidas > 0:
         txt = font.render(f"J1 OUT: {j1_salidas}", True, COLOR_TEXTO)
-        surface.blit(txt, txt.get_rect(center=(rect_j1.centerx, MARGEN_Y + 10)))
+        txt_rect = txt.get_rect(center=(rect_j1.centerx, MARGEN_Y + 10))
+        surface.blit(txt, txt_rect)
 
     j2_salidas = juego.tablero.fichas_salidas(j2_id)
     rect_j2 = pygame.Rect(OUT_BAR_X_J2, MARGEN_Y, OUT_BAR_W, ALTO - 2 * MARGEN_Y)
@@ -224,34 +267,42 @@ def _draw_bearing_off_bar(surface: pygame.Surface, juego: Juego, font: pygame.fo
 
     if j2_salidas > 0:
         txt = font.render(f"J2 OUT: {j2_salidas}", True, COLOR_TEXTO)
-        surface.blit(txt, txt.get_rect(center=(rect_j2.centerx, MARGEN_Y + 10)))
+        txt_rect = txt.get_rect(center=(rect_j2.centerx, MARGEN_Y + 10))
+        surface.blit(txt, txt_rect)
 
 
-def _dibujar_hints(surface: pygame.Surface, origen: int | None, movs: list[int], juego: Juego) -> None:
+def _dibujar_hints(
+    surface: pygame.Surface,
+    origen: int | None,
+    movs: list[int],
+    juego: Juego
+) -> None:
     """Dibuja pistas visuales (puntos verdes) en los destinos posibles."""
     if origen is None or not movs or _BOARD_RECT is None:
         return
-        
+
     pid = juego.jugador_actual.id
     posibles = set()
 
     for d in movs:
         destino_fwd = origen + d if pid % 2 != 0 else origen - d
-        
+
         if 0 <= destino_fwd < PUNTOS:
             ok, _ = juego._validar_movimiento(origen, destino_fwd)
             if ok:
                 posibles.add(destino_fwd)
-        
+
         if juego.tablero.puede_sacar_fichas(pid):
             ok, _ = juego._validar_movimiento(origen, PUNTOS)
             if ok:
-                 posibles.add(PUNTOS)
+                posibles.add(PUNTOS)
 
     for idx in posibles:
         if idx == PUNTOS:
-            rect = pygame.Rect(OUT_BAR_X_J1 if pid % 2 != 0 else OUT_BAR_X_J2, 
-                               _BOARD_RECT.centery - 10, OUT_BAR_W, 20)
+            out_x = OUT_BAR_X_J1 if pid % 2 != 0 else OUT_BAR_X_J2
+            rect = pygame.Rect(
+                out_x, _BOARD_RECT.centery - 10, OUT_BAR_W, 20
+            )
             pygame.draw.rect(surface, COLOR_HINT, rect, border_radius=6)
         else:
             x, y = _point_center(idx)
@@ -260,45 +311,88 @@ def _dibujar_hints(surface: pygame.Surface, origen: int | None, movs: list[int],
 
 def _punto_desde_xy(x: int, y: int) -> int | None:
     """Mapear click a índice 0..23 en el tablero central."""
-    if _BOARD_RECT is None: return None
-        
+    if _BOARD_RECT is None:
+        return None
+
     triw = _tri_w()
     fila_sup = y < _BOARD_RECT.centery
     base_y = _BOARD_RECT.top if fila_sup else _BOARD_RECT.bottom
 
     if x < _BOARD_RECT.left or x >= _BOARD_RECT.right:
         return None
-        
+
     col = int((x - _BOARD_RECT.left) // triw)
-    if not (0 <= col <= 11):
+    if not 0 <= col <= 11:
         return None
-        
+
     if abs(y - base_y) > (_BOARD_RECT.height * 0.5):
         return None
 
     if fila_sup:
-        idx = 11 - col  
+        idx = 11 - col
     else:
-        idx = 12 + col  
+        idx = 12 + col
     return idx
 
 
 def _point_or_out_bar_from_xy(x: int, y: int) -> int | None:
     """Mapear click a índice 0..23 o al índice 24 (Salida/Bearing Off)."""
-
     idx = _punto_desde_xy(x, y)
     if idx is not None:
         return idx
 
-    rect_out_j1 = pygame.Rect(OUT_BAR_X_J1, MARGEN_Y, OUT_BAR_W, ALTO - 2 * MARGEN_Y)
-    rect_out_j2 = pygame.Rect(OUT_BAR_X_J2, MARGEN_Y, OUT_BAR_W, ALTO - 2 * MARGEN_Y)
+    rect_out_j1 = pygame.Rect(
+        OUT_BAR_X_J1, MARGEN_Y, OUT_BAR_W, ALTO - 2 * MARGEN_Y
+    )
+    rect_out_j2 = pygame.Rect(
+        OUT_BAR_X_J2, MARGEN_Y, OUT_BAR_W, ALTO - 2 * MARGEN_Y
+    )
 
     if rect_out_j1.collidepoint(x, y) or rect_out_j2.collidepoint(x, y):
-        return PUNTOS 
-    
+        return PUNTOS
+
     return None
 
+
+def _manejar_evento_tirada(juego: Juego, f20: pygame.font.Font):
+    """Maneja el evento de tirar dados."""
+    d1, d2, movs = juego.tirar()
+    mensaje = f"Tirada: {d1} y {d2} → movs: {movs}"
+    return f20.render(mensaje, True, COLOR_TEXTO)
+
+
+def _manejar_movimiento(
+    juego: Juego,
+    sel: int,
+    idx: int,
+    f20: pygame.font.Font
+):
+    """Maneja el intento de movimiento de una ficha."""
+    ok = juego.mover_ficha(sel, idx)
+
+    if ok:
+        if idx == PUNTOS:
+            msg = (
+                f"Ficha sacada (Bearing Off) desde {sel} OK. "
+                f"Restantes: {juego.movimientos_disponibles()}"
+            )
+        else:
+            msg = (
+                f"Movimiento {sel}→{idx} OK. "
+                f"Restantes: {juego.movimientos_disponibles()}"
+            )
+
+        if juego.termino():
+            msg += f" - ¡{juego.ganador().nombre} ha ganado!"
+    else:
+        error = juego.ultimo_error() or 'movimiento inválido'
+        msg = f"NO se pudo mover {sel}→{idx}. Motivo: {error}"
+
+    return ok, f20.render(msg, True, COLOR_TEXTO)
+
+
 def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
+    """Función principal que inicia la interfaz gráfica del juego."""
     pygame.init()
     pygame.font.init()
 
@@ -306,11 +400,14 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
     screen = pygame.display.set_mode((ancho, alto), flags=flags)
     pygame.display.set_caption("Backgammon — Computación 2025")
     clock = pygame.time.Clock()
+
     f28 = pygame.font.Font(None, 28)
     f20 = pygame.font.Font(None, 20)
-    j1 = Jugador("Blancas"); j2 = Jugador("Negras")
+
+    j1 = Jugador("Blancas")
+    j2 = Jugador("Negras")
     juego = Juego(j1, j2)
-    juego.reiniciar() 
+    juego.reiniciar()
 
     ultimo_txt = None
     seleccionado: int | None = None
@@ -319,6 +416,11 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
     while corriendo:
         _board_rect()
 
+        if seleccionado is not None:
+            pid = juego.jugador_actual.id
+            if pid not in [f.owner_id for f in juego.tablero.punto(seleccionado)]:
+                seleccionado = None
+
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
                 corriendo = False
@@ -326,56 +428,48 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
                 if ev.key == pygame.K_ESCAPE:
                     corriendo = False
                 elif ev.key == pygame.K_t:
-                    d1, d2, movs = juego.tirar()
-                    ultimo_txt = f20.render(f"Tirada: {d1} y {d2} → movs: {movs}", True, COLOR_TEXTO)
+                    ultimo_txt = _manejar_evento_tirada(juego, f20)
                 elif ev.key == pygame.K_c:
-                    juego.cambiar_turno(); seleccionado = None
+                    juego.cambiar_turno()
+                    seleccionado = None
                 elif ev.key == pygame.K_r:
-                    juego.reiniciar(); ultimo_txt = None; seleccionado = None
+                    juego.reiniciar()
+                    ultimo_txt = None
+                    seleccionado = None
             elif ev.type == pygame.MOUSEBUTTONDOWN and ev.button == 1:
                 idx = _point_or_out_bar_from_xy(*ev.pos)
-                
+
                 if idx is None:
                     seleccionado = None
+                elif seleccionado is None:
+                    if idx != PUNTOS:
+                        seleccionado = idx
+                elif idx == seleccionado:
+                    seleccionado = None
                 else:
-                    if seleccionado is None:
-                        if idx != PUNTOS:
-                            seleccionado = idx
-                    else:
-                        if idx == seleccionado:
-                            seleccionado = None
-                        else:
-                            ok = juego.mover_ficha(seleccionado, idx)
-                            
-                            if ok:
-                                if idx == PUNTOS:
-                                    msg = f"Ficha sacada (Bearing Off) desde {seleccionado} OK. Restantes: {juego.movimientos_disponibles()}"
-                                else:
-                                    msg = f"Movimiento {seleccionado}→{idx} OK. Restantes: {juego.movimientos_disponibles()}"
-                                
-                                if juego.termino():
-                                    msg += f" - ¡{juego.ganador().nombre} ha ganado!"
-                                    
-                                seleccionado = None
-                            else:
-                                msg = (f"NO se pudo mover {seleccionado}→{idx}. "
-                                       f"Motivo: {juego.ultimo_error() or 'movimiento inválido'}")
-                            ultimo_txt = f20.render(msg, True, COLOR_TEXTO)
+                    ok, ultimo_txt = _manejar_movimiento(juego, seleccionado, idx, f20)
+                    if ok:
+                        seleccionado = None
+
         screen.fill(BG_COLOR)
-        
+
         _draw_bearing_off_bar(screen, juego, f20)
         _dibujar_marco_y_labels(screen, f20)
         _dibujar_triangulos(screen)
-        
-        _dibujar_hints(screen, seleccionado, juego.movimientos_disponibles(), juego) 
+
+        _dibujar_hints(screen, seleccionado, juego.movimientos_disponibles(), juego)
         _dibujar_fichas(screen, juego, f20)
         _dibujar_barra(screen, juego, f20)
 
-        estado = (f"estado={juego.estado} | turno={juego.jugador_actual.nombre} "
-                  f"(id {juego.jugador_actual.id}) | movs={juego.movimientos_disponibles()}")
-        titulo = f28.render(
-            "UI Completa — ESC: salir | T: tirar | C: cambiar turno | R: reiniciar", True, COLOR_TEXTO
+        movs = juego.movimientos_disponibles()
+        estado = (
+            f"estado={juego.estado} | turno={juego.jugador_actual.nombre} "
+            f"(id {juego.jugador_actual.id}) | movs={movs}"
         )
+        titulo_texto = (
+            "UI Completa — ESC: salir | T: tirar | C: cambiar turno | R: reiniciar"
+        )
+        titulo = f28.render(titulo_texto, True, COLOR_TEXTO)
         info = f20.render(estado, True, COLOR_TEXTO)
 
         screen.blit(titulo, (20, 20))
