@@ -73,16 +73,14 @@ class Juego:
     def es_ficha_mas_lejana(self, jugador_id: int, punto: int) -> bool:
         """Verifica si la ficha en 'punto' es la más lejana del home board."""
         if jugador_id % 2 != 0:
-            puntos_relevantes = [
-                i for i in range(0, min(punto, 18))
-                if any(f.owner_id == jugador_id for f in self.__tablero__.punto(i))
-            ]
-            return not puntos_relevantes
-        puntos_relevantes = [
-            i for i in range(max(punto + 1, 6), 24)
-            if any(f.owner_id == jugador_id for f in self.__tablero__.punto(i))
-        ]
-        return not puntos_relevantes
+            for i in range(18, punto):
+                if any(f.owner_id == jugador_id for f in self.__tablero__.punto(i)):
+                    return False
+            return True
+        for i in range(punto + 1, 6):
+            if any(f.owner_id == jugador_id for f in self.__tablero__.punto(i)):
+                return False
+        return True
 
     def _entrada_para(self, pid: int) -> int:
         """Punto de entrada (desde la barra) para el jugador."""
@@ -151,11 +149,15 @@ class Juego:
 
         else:
             distancia = abs(hasta - desde)
-            condicion = (pid % 2 != 0 and hasta < desde) or \
-                        (pid % 2 == 0 and hasta > desde)
-            if not condicion:
-                self._set_error("el jugador debe moverse hacia adelante")
-                return False, distancia
+            if pid % 2 != 0:
+                if hasta >= desde:
+                    self._set_error("el jugador debe moverse hacia adelante")
+                    return False, distancia
+            else:
+                if hasta <= desde:
+                    self._set_error("el jugador debe moverse hacia adelante")
+                    return False, distancia
+
             if not self.__tablero__._jugador_en_punto(pid, desde):
                 self._set_error("no hay ficha del jugador en el origen")
                 return False, distancia
