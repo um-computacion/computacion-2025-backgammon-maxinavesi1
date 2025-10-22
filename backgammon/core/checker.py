@@ -1,19 +1,22 @@
+"""Módulo de la clase Checker, representa una ficha individual del juego Backgammon."""
+
+
 class Checker:
     """
     Representa una ficha individual del juego Backgammon.
-    Una ficha tiene un propietario (Jugador ID).
+    Su única responsabilidad es mantener la identidad de su dueño.
     """
 
     def __init__(self, jugador_id: int):
         """
-        Inicializa la ficha.
-        
+        Inicializa la ficha con el ID de su jugador propietario.
+
         Recibe:
-            jugador_id (int): ID del jugador propietario de esta ficha.
+            jugador_id (int): ID del jugador propietario.
         Devuelve:
             None
         """
-        self.__pid__ = jugador_id 
+        self.__pid__ = jugador_id
 
     @property
     def owner_id(self) -> int:
