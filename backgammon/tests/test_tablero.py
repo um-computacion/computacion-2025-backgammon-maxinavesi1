@@ -233,9 +233,10 @@ class PruebasTableroExtra(unittest.TestCase):
         """Verifica movimiento seguro desde clase Juego."""
         g = Juego(Jugador("A"), Jugador("B"))
         pid = g.jugador_actual.id
-        g.tablero.colocar_ficha(pid, 0)
-        g._Juego__movs_restantes = [3]
-        ok = g.mover_ficha(0, 3)
+        # Jugador 1 (impar) se mueve de mayor a menor índice
+        g.tablero.colocar_ficha(pid, 5)
+        g._Juego__movs_restantes__ = [3]
+        ok = g.mover_ficha(5, 2)  # De 5 a 2 (distancia 3)
         self.assertTrue(ok)
         self.assertEqual(g.jugador_actual.nombre, "B")
 
@@ -277,6 +278,7 @@ class PruebasTableroExtra(unittest.TestCase):
 
         for punto, cantidad_esperada in expected_j1.items():
             fichas_en_punto = t.punto(punto)
+            # CORRECCIÓN Ln 244: Línea larga rota
             self.assertEqual(
                 len(fichas_en_punto),
                 cantidad_esperada,

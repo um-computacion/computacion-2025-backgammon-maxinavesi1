@@ -74,14 +74,13 @@ class Juego:
         """Verifica si la ficha en 'punto' es la más lejana del home board."""
         if jugador_id % 2 != 0:
             puntos_relevantes = [
-                i for i in range(18, punto)
-                if jugador_id in self.__tablero__.punto(i)
+                i for i in range(0, min(punto, 18))
+                if any(f.owner_id == jugador_id for f in self.__tablero__.punto(i))
             ]
             return not puntos_relevantes
-
         puntos_relevantes = [
-            i for i in range(punto + 1, 6)
-            if jugador_id in self.__tablero__.punto(i)
+            i for i in range(max(punto + 1, 6), 24)
+            if any(f.owner_id == jugador_id for f in self.__tablero__.punto(i))
         ]
         return not puntos_relevantes
 
@@ -154,11 +153,10 @@ class Juego:
             distancia = abs(hasta - desde)
             condicion = (pid % 2 != 0 and hasta < desde) or \
                         (pid % 2 == 0 and hasta > desde)
-            if condicion:
+            if not condicion:
                 self._set_error("el jugador debe moverse hacia adelante")
                 return False, distancia
-
-            if pid not in self.__tablero__.punto(desde):
+            if not self.__tablero__._jugador_en_punto(pid, desde):
                 self._set_error("no hay ficha del jugador en el origen")
                 return False, distancia
             if self.__tablero__._bloqueado_por_oponente(pid, hasta):
