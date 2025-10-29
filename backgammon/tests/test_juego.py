@@ -542,7 +542,7 @@ class PruebasJuego(unittest.TestCase):
         """Verifica que es_ficha_mas_lejana detecte fichas más lejos para J2."""
         juego = Juego(Jugador("A"), Jugador("B"), indice_inicial=1)
         pid = juego.jugador_actual.id
-        if pid % 2 == 0:  # Solo si es J2
+        if pid % 2 == 0:
             juego.tablero.preparar_posicion_inicial()
             juego.tablero.colocar_ficha(pid, 0)
             juego.tablero.colocar_ficha(pid, 3)
