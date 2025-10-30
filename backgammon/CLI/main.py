@@ -240,8 +240,8 @@ def mostrar_movimientos_posibles(juego):
 
             # Verificar bearing off
             if puede_bearing:
-                home_inicio = 0 if jugador_id % 2 == 1 else 18
-                home_fin = 5 if jugador_id % 2 == 1 else 23
+                home_inicio = 18 if jugador_id % 2 == 1 else 0
+                home_fin = 23 if jugador_id % 2 == 1 else 5
                 en_home = home_inicio <= punto_origen <= home_fin
 
                 if en_home and (destino < 0 or destino > 23):
