@@ -228,7 +228,7 @@ def mostrar_movimientos_posibles(juego):
     movimientos_validos = []
 
     # Verificar si puede hacer bearing off
-    puede_bearing = juego._validar_bearing_off(jugador_id)
+    puede_bearing = juego.tablero.puede_sacar_fichas(jugador_id)
 
     for punto_origen, cantidad in puntos_con_fichas:
         for dado in sorted(movimientos_dados, reverse=True):
@@ -409,6 +409,7 @@ def turno_juego(juego):
                 mostrar_info_jugador(juego)
                 mostrar_movimientos_posibles(juego)
                 input("\n[Presioná ENTER para continuar]")
+            continue
 
         elif accion == 'V':
             if not juego.movimientos_disponibles():
@@ -417,6 +418,7 @@ def turno_juego(juego):
             else:
                 mostrar_movimientos_posibles(juego)
                 input("\n[Presioná ENTER para continuar]")
+            continue
 
         elif accion == 'M':
             if not juego.movimientos_disponibles():
@@ -479,12 +481,6 @@ def turno_juego(juego):
             juego.cambiar_turno()
             input("\n[Presioná ENTER para continuar]")
             return True
-
-        # Actualizar pantalla después de cada acción (excepto movimientos que ya actualizan)
-        if accion in ('T', 'V', 'P'):
-            limpiar_pantalla()
-            dibujar_tablero(juego)
-            mostrar_info_jugador(juego)
 
 
 def mostrar_bienvenida():
