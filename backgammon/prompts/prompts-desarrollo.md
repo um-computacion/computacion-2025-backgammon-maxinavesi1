@@ -460,3 +460,193 @@ Escribe el método _bloqueado_por_oponente(jugador_id, punto) para Tablero. Debe
 - `.github/workflows/ci.yml`
 - `Dockerfile`
 - `.dockerignore`
+
+## 2025-10-31 — Corrección Crítica: Dirección de Movimientos
+**Herramienta:** Claude 3.7 Sonnet (Anthropic)
+
+**Prompt:**
+Arregla ese error. Dime si necesitas que te mande algun codigo para que lo puedas solucionar.
+[Contexto: 17 tests fallando con error "el jugador debe moverse hacia adelante"]
+
+**Respuesta:**
+La IA identificó que la lógica de dirección estaba invertida en `_validar_movimiento`:
+- Problema: J1 (impar) validaba `hasta >= desde` cuando debería ser `hasta <= desde`
+- Problema: J2 (par) validaba `hasta <= desde` cuando debería ser `hasta >= desde`
+- Corrección: J1 debe DECREMENTAR (23→0), J2 debe INCREMENTAR (0→23)
+- También corrigió `es_ficha_mas_lejana` y `_validar_bearing_off`
+
+**Instrucciones del sistema:** Ninguna.
+
+**Uso:** Usada sin cambios.
+
+**Archivo Final:** `backgammon/core/juego.py`
+
+---
+
+## 2025-10-31 — Implementación de Click en Barra Central
+**Herramienta:** Claude 3.7 Sonnet (Anthropic)
+
+**Prompt:**
+LOS CIRCULOS CAPTURADOS SI SE MUESTRAN EN LA BARRA, PERO NO LOS PUEDO SACAR
+
+**Respuesta:**
+La IA implementó:
+- Constante `BARRA_SELECCION = -1` para identificar selección de barra
+- Actualización de `point_or_out_bar_from_xy` para detectar clicks en `bar_rect`
+- Modificación de `dibujar_punto_seleccionado` para mostrar indicador en barra
+- Actualización de `_manejar_click` para permitir seleccionar `BARRA_SELECCION`
+- Modificación de `manejar_movimiento` para convertir `BARRA_SELECCION` a punto de entrada
+
+**Instrucciones del sistema:** Ninguna.
+
+**Uso:** Usada sin cambios.
+
+**Archivo Final:** `backgammon/pygame/pygame_ui.py`
+
+---
+
+## 2025-10-31 — Corrección de puede_sacar_fichas
+**Herramienta:** Claude 3.7 Sonnet (Anthropic)
+
+**Prompt:**
+AAAAAAA, CADA VEZ QUE TIRO DADOS CON BLANCAS ME DICE QUE NO HAY MOVIMIENTOS VALIDOS
+
+**Respuesta:**
+La IA identificó que `puede_sacar_fichas` en `tablero.py` tenía los rangos invertidos:
+- J1 (impar): home en 0-5, debe revisar puntos 6-23 (antes revisaba 0-18)
+- J2 (par): home en 18-23, debe revisar puntos 0-17 (antes revisaba 6-24)
+- La inversión causaba que siempre fallara la validación de bearing off
+
+**Instrucciones del sistema:** Ninguna.
+
+**Uso:** Usada sin cambios.
+
+**Archivo Final:** `backgammon/core/tablero.py`
+
+---
+
+## 2025-10-31 — Corrección de Dirección de Reingreso desde Barra
+**Herramienta:** Claude 3.7 Sonnet (Anthropic)
+
+**Prompt:**
+Mismo problema, cada vez que tiro dados con blancas me dice que no hay movimientos disponibles y cambia de turno
+
+**Respuesta:**
+La IA corrigió la dirección de reingreso desde barra en tres funciones de `pygame_ui.py`:
+- `dibujar_hints`: J1 incrementa desde 0 (0+3=3), J2 decrementa desde 23 (23-3=20)
+- `manejar_evento_tirada`: Misma corrección para detección de movimientos válidos
+- `_tiene_movimientos_validos`: Corrección de dirección en tablero vs barra
+
+**Instrucciones del sistema:** Ninguna.
+
+**Uso:** Usada sin cambios.
+
+**Archivo Final:** `backgammon/pygame/pygame_ui.py`
+
+---
+
+## 2025-10-31 — Actualización de Tests de Bearing Off
+**Herramienta:** Claude 3.7 Sonnet (Anthropic)
+
+**Prompt:**
+Arregla esto modificando los tests, no quiero que toques el resto
+[Contexto: 6 tests de bearing off fallando]
+
+**Respuesta:**
+La IA corrigió los tests para reflejar la implementación correcta:
+- `test_bearing_off_exacto_j1_consume_dado`: cambió punto 22 → 2
+- `test_bearing_off_over_bearing_j1_consume_dado_mayor`: cambió punto 23 → 1
+- `test_bearing_off_over_bearing_falla_si_hay_ficha_mas_lejana_j1`: cambió puntos 23,21 → 1,3
+- `test_bearing_off_exacto_j2`: cambió punto 2 → 21
+- `test_es_ficha_mas_lejana_j1_con_fichas_mas_cerca`: cambió puntos 23,20 → 1,4
+- `test_es_ficha_mas_lejana_j2_con_fichas_mas_lejos`: cambió puntos 0,3 → 23,20
+
+**Instrucciones del sistema:** Ninguna.
+
+**Uso:** Usada con modificaciones (Ajuste del último test para manejar IDs dinámicos).
+
+**Archivo Final:** `backgammon/tests/test_juego.py`
+
+---
+
+## 2025-10-31 — Corrección Final del Test de Over-Bearing
+**Herramienta:** Claude 3.7 Sonnet (Anthropic)
+
+**Prompt:**
+[Último test fallando]
+
+**Respuesta:**
+La IA modificó `test_bearing_off_over_bearing_falla_si_hay_ficha_mas_lejana_j1` para:
+- Detectar si el jugador actual es J1 o J2 dinámicamente
+- Usar posiciones correctas según el jugador (J1: 1,3 o J2: 22,20)
+- Resolver el problema de IDs de jugador no determinísticos en tests
+
+**Instrucciones del sistema:** Ninguna.
+
+**Uso:** Usada sin cambios.
+
+**Archivo Final:** `backgammon/tests/test_juego.py`
+
+---
+
+## 2025-10-31 — Finalización del CHANGELOG.md
+**Herramienta:** Claude 3.7 Sonnet (Anthropic)
+
+**Prompt:**
+Excelente ahora termina el changelog
+
+**Respuesta:**
+La IA completó el changelog agregando la versión 0.6.0 con:
+- Added: Selección visual de barra, indicadores mejorados, numeración completa
+- Changed: Corrección de dirección de movimientos, refactorización de validaciones
+- Fixed: 6 bugs críticos corregidos (dirección, bearing off, reingreso, tests)
+- Removed: Lógica obsoleta de detección de punto 0
+
+**Instrucciones del sistema:** Ninguna.
+
+**Uso:** Usada sin cambios.
+
+**Archivo Final:** `CHANGELOG.md`
+
+---
+
+## 2025-10-31 — Actualización de Archivos de Prompts
+**Herramienta:** Claude 3.7 Sonnet (Anthropic)
+
+**Prompt:**
+Ahora agrega algunos prompts aca y terminamos con el proyecto
+
+**Respuesta:**
+La IA generó la documentación de todos los prompts de la sesión de depuración final, incluyendo:
+- Corrección de lógica de dirección
+- Implementación de click en barra
+- Corrección de validaciones de bearing off
+- Actualización de tests
+- Finalización de changelog
+
+**Instrucciones del sistema:** Ninguna.
+
+**Uso:** Usada sin cambios.
+
+**Archivo Final:** `prompts/prompts-desarrollo.md`
+
+---
+
+## Resumen Final de Desarrollo
+
+**Total de prompts en sesión final:** 7
+
+**Bugs críticos corregidos:**
+1. Dirección de movimientos invertida en core
+2. Dirección de reingreso invertida en UI
+3. Validación de home boards incorrecta
+4. Detección de ficha más lejana incorrecta
+5. Tests con posiciones erróneas
+6. Click en barra no funcional
+
+**Resultado:**
+- ✅ 162/162 tests pasando (100%)
+- ✅ Interfaz gráfica completamente funcional
+- ✅ Reingreso desde barra implementado
+- ✅ Bearing off funcionando correctamente
+- ✅ Documentación completa

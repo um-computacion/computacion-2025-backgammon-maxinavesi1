@@ -5,8 +5,7 @@ y bearing off (sacar fichas).
 
 Teclas:
   ESC   → salir
-  T     → tirar dados
-  C     → cambiar turno
+  T     → tirar dados (solo una vez por turno)
   R     → reiniciar a la posición inicial estándar
   H     → mostrar/ocultar ayuda
   D     → deseleccionar ficha (o click en espacio vacío)
@@ -18,11 +17,12 @@ from backgammon.core.jugador import Jugador
 from backgammon.core.tablero import PUNTOS
 
 ANCHO = 1000
-ALTO = 700
+ALTO = 750
 FPS = 60
 
 MARGEN_X = 40
-MARGEN_Y = 40
+MARGEN_Y_TABLERO = 120
+MARGEN_Y_BOTTOM = 40
 
 BG_COLOR = (245, 239, 230)
 BOARD_COLOR = (230, 220, 200)
@@ -34,12 +34,17 @@ COLOR_TEXTO = (25, 25, 25)
 COLOR_J1 = (245, 245, 245)
 COLOR_J2 = (30, 30, 30)
 COLOR_HINT = (90, 180, 90)
-COLOR_SELECCION = (255, 215, 0)  # Dorado para punto seleccionado
+COLOR_SELECCION = (255, 215, 0)
 
 MAX_VISIBLE_STACK = 5
 OUT_BAR_W = 60
 OUT_BAR_X_J1 = ANCHO - MARGEN_X - OUT_BAR_W
 OUT_BAR_X_J2 = MARGEN_X
+
+HUD_HEIGHT = 100
+
+# Constante especial para indicar selección de barra
+BARRA_SELECCION = -1
 
 
 class BoardGeometry:
@@ -48,15 +53,16 @@ class BoardGeometry:
     def __init__(self):
         self.rect = None
         self.tri_width = 0
+        self.bar_rect = None
 
     def get_rect(self) -> pygame.Rect:
         """Calcula y retorna el rectángulo del tablero interno con márgenes."""
         if self.rect is None:
             self.rect = pygame.Rect(
                 MARGEN_X + OUT_BAR_W,
-                MARGEN_Y + 20,
+                MARGEN_Y_TABLERO + 20,
                 ANCHO - 2 * MARGEN_X - 2 * OUT_BAR_W,
-                ALTO - 2 * MARGEN_Y - 40
+                ALTO - MARGEN_Y_TABLERO - MARGEN_Y_BOTTOM - 20
             )
             self.tri_width = self.rect.width / 12.0
         return self.rect
@@ -66,6 +72,14 @@ class BoardGeometry:
         if self.rect is None:
             self.get_rect()
         return self.tri_width
+
+    def get_bar_rect(self) -> pygame.Rect:
+        """Retorna el rectángulo de la barra central."""
+        if self.bar_rect is None:
+            board_rect = self.get_rect()
+            bar_x = board_rect.centerx - 30
+            self.bar_rect = pygame.Rect(bar_x, board_rect.top, 60, board_rect.height)
+        return self.bar_rect
 
 
 BOARD = BoardGeometry()
@@ -113,7 +127,7 @@ def dibujar_marco_y_labels(
     surface: pygame.Surface,
     font: pygame.font.Font
 ) -> None:
-    """Dibuja el marco y la numeración 12..1 / 13..24."""
+    """Dibuja el marco y la numeración 12..0 / 13..24."""
     board_rect = BOARD.get_rect()
     tri_width = BOARD.get_tri_width()
 
@@ -125,7 +139,8 @@ def dibujar_marco_y_labels(
         (board_rect.right, board_rect.centery), 1
     )
 
-    top_labels = [str(i) for i in range(12, 0, -1)]
+    # CORRECCIÓN: Ahora incluye el punto 0
+    top_labels = [str(i) for i in range(12, -1, -1)]  # 12, 11, 10... 1, 0
     for col_vis, lbl in enumerate(top_labels):
         x_pos = int(board_rect.left + col_vis * tri_width + tri_width / 2)
         y_pos = board_rect.top - 14
@@ -159,16 +174,28 @@ def draw_checker(
 
 def dibujar_punto_seleccionado(
     surface: pygame.Surface,
-    idx: int | None
+    idx: int | None,
+    juego: Juego
 ) -> None:
     """Dibuja un indicador visual en el punto seleccionado."""
     if idx is None or idx == PUNTOS:
         return
 
+    # NUEVO: Indicador especial para barra seleccionada
+    if idx == BARRA_SELECCION:
+        bar_rect = BOARD.get_bar_rect()
+        pygame.draw.rect(surface, COLOR_SELECCION, bar_rect, 5, border_radius=8)
+
+        # Mostrar texto de ayuda
+        font = pygame.font.Font(None, 20)
+        pid = juego.jugador_actual.id
+        entrada = juego._entrada_para(pid)
+        txt = font.render(f"Click en punto {entrada} para entrar", True, (255, 140, 0))
+        surface.blit(txt, (bar_rect.centerx - 100, bar_rect.centery - 10))
+        return
+
     x_pos, y_pos = point_center(idx)
-    # Círculo pulsante dorado
     pygame.draw.circle(surface, COLOR_SELECCION, (x_pos, y_pos), 35, 4)
-    # Círculo interior para efecto de resplandor
     pygame.draw.circle(
         surface, (*COLOR_SELECCION[:3], 100), (x_pos, y_pos), 32, 2
     )
@@ -281,16 +308,13 @@ def dibujar_barra(
     font: pygame.font.Font
 ) -> None:
     """Muestra cuántas fichas tiene cada jugador en la barra central (Bar)."""
-    board_rect = BOARD.get_rect()
     j1_id = juego.jugadores[0].id
     j2_id = juego.jugadores[1].id
 
     barra_1 = juego.tablero.fichas_en_barra(j1_id)
     barra_2 = juego.tablero.fichas_en_barra(j2_id)
 
-    # Barra más ancha y visible
-    bar_x = board_rect.centerx - 20
-    bar_rect = pygame.Rect(bar_x, board_rect.top, 40, board_rect.height)
+    bar_rect = BOARD.get_bar_rect()
     pygame.draw.rect(surface, (200, 200, 200), bar_rect, border_radius=8)
     pygame.draw.rect(surface, LINE, bar_rect, 2, border_radius=8)
 
@@ -315,9 +339,14 @@ def _dibujar_bearing_off_single(
 
     if salidas > 0:
         txt = font.render(label, True, COLOR_TEXTO)
-        surface.blit(txt, txt.get_rect(center=(rect.centerx, MARGEN_Y + 15)))
+        rect_top = rect.top - MARGEN_Y_TABLERO + HUD_HEIGHT
+        surface.blit(
+            txt, txt.get_rect(center=(rect.centerx, rect_top + 15))
+        )
         num = font.render(str(salidas), True, COLOR_TEXTO)
-        surface.blit(num, num.get_rect(center=(rect.centerx, MARGEN_Y + 35)))
+        surface.blit(
+            num, num.get_rect(center=(rect.centerx, rect_top + 35))
+        )
 
 
 def draw_bearing_off_bar(
@@ -326,18 +355,25 @@ def draw_bearing_off_bar(
     font: pygame.font.Font
 ) -> None:
     """Dibuja las barras laterales de Bearing Off (Salida) y el conteo."""
+    board_rect = BOARD.get_rect()
     j1_id = juego.jugadores[0].id
     j2_id = juego.jugadores[1].id
 
     j1_salidas = juego.tablero.fichas_salidas(j1_id)
     rect_j1 = pygame.Rect(
-        OUT_BAR_X_J1, MARGEN_Y, OUT_BAR_W, ALTO - 2 * MARGEN_Y
+        OUT_BAR_X_J1,
+        board_rect.top,
+        OUT_BAR_W,
+        board_rect.height
     )
     _dibujar_bearing_off_single(surface, rect_j1, j1_salidas, "J1 OUT", font)
 
     j2_salidas = juego.tablero.fichas_salidas(j2_id)
     rect_j2 = pygame.Rect(
-        OUT_BAR_X_J2, MARGEN_Y, OUT_BAR_W, ALTO - 2 * MARGEN_Y
+        OUT_BAR_X_J2,
+        board_rect.top,
+        OUT_BAR_W,
+        board_rect.height
     )
     _dibujar_bearing_off_single(surface, rect_j2, j2_salidas, "J2 OUT", font)
 
@@ -350,21 +386,19 @@ def _tiene_movimientos_validos(juego: Juego, punto: int) -> bool:
 
     pid = juego.jugador_actual.id
 
-    # Verificar si hay fichas en la barra (entonces este punto no es válido)
     if juego.tablero.fichas_en_barra(pid) > 0:
         entrada = juego._entrada_para(pid)
         return punto == entrada
 
-    # Verificar movimientos normales y bearing off
     for mov in movs:
-        destino = (punto + mov) if pid % 2 == 0 else (punto - mov)
+ #J1 (impar) decrementa, J2 (par) incrementa
+        destino = (punto - mov) if pid % 2 != 0 else (punto + mov)
 
         if 0 <= destino < PUNTOS:
             ok, _ = juego._validar_movimiento(punto, destino)
             if ok:
                 return True
 
-        # Verificar bearing off
         if juego.tablero.puede_sacar_fichas(pid):
             ok, _ = juego._validar_movimiento(punto, PUNTOS)
             if ok:
@@ -387,29 +421,47 @@ def dibujar_hints(
     pid = juego.jugador_actual.id
     posibles = set()
 
-    # Si hay fichas en la barra, mostrar punto de entrada
     fichas_barra = juego.tablero.fichas_en_barra(pid)
+
+    # NUEVO: Si seleccionó la barra, mostrar punto de entrada
+    if origen == BARRA_SELECCION and fichas_barra > 0:
+        entrada = juego._entrada_para(pid)
+
+        # Mostrar hints en todos los puntos posibles desde la entrada
+        for mov in movs:
+            # ✅ CORRECCIÓN: desde barra, J1 incrementa desde 0, J2 decrementa desde 23
+            destino = entrada + mov if pid % 2 != 0 else entrada - mov
+            if 0 <= destino < PUNTOS:
+                ok, _ = juego._validar_movimiento(entrada, destino)
+                if ok:
+                    posibles.add(destino)
+
+        # Dibujar los hints
+        for idx in posibles:
+            x_pos, y_pos = point_center(idx)
+            pygame.draw.circle(surface, COLOR_HINT, (x_pos, y_pos), 10)
+            pygame.draw.circle(surface, (50, 150, 50), (x_pos, y_pos), 10, 2)
+        return
+
+    # Si tiene fichas en barra pero NO seleccionó nada, mostrar advertencia
     if fichas_barra > 0 and origen is None:
         entrada = juego._entrada_para(pid)
-        # Marcar el punto de entrada con un círculo naranja pulsante
-        x_pos, y_pos = point_center(entrada)
-        pygame.draw.circle(
-            surface, (255, 140, 0), (x_pos, y_pos), 40, 5
-        )
-        pygame.draw.circle(
-            surface, (255, 180, 50, 100), (x_pos, y_pos), 35, 3
-        )
+        bar_rect = BOARD.get_bar_rect()
 
-        # Mostrar hint de "Debes entrar aquí"
-        font = pygame.font.Font(None, 20)
-        txt = font.render("¡ENTRA AQUÍ!", True, (255, 100, 0))
-        surface.blit(txt, (x_pos - 50, y_pos - 60))
+        # Destacar la barra
+        pygame.draw.rect(surface, (255, 140, 0), bar_rect, 4, border_radius=8)
+
+        # Mostrar mensaje
+        font = pygame.font.Font(None, 18)
+        txt = font.render("¡Click en BARRA!", True, (255, 100, 0))
+        surface.blit(txt, (bar_rect.centerx - 60, bar_rect.top - 20))
         return
 
     if origen is None:
         return
 
     for distancia in movs:
+        # J1 (impar) decrementa en tablero, J2 (par) incrementa en tablero
         if pid % 2 != 0:
             destino_fwd = origen - distancia
         else:
@@ -447,20 +499,19 @@ def mostrar_ayuda(surface: pygame.Surface, font: pygame.font.Font) -> None:
 
     titulo_font = pygame.font.Font(None, 48)
     titulo = titulo_font.render("AYUDA", True, (255, 215, 0))
-    surface.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 100)))
+    surface.blit(titulo, titulo.get_rect(center=(ANCHO // 2, 150)))
 
     textos = [
         "",
         "CONTROLES:",
-        "T - Tirar dados",
+        "T - Tirar dados (una vez por turno)",
         "D o ESC - Deseleccionar ficha",
-        "C - Cambiar turno manualmente",
         "R - Reiniciar juego",
         "H - Mostrar/Ocultar ayuda",
-        "ESC - Salir del juego",
         "",
         "JUGABILIDAD:",
         "• Click en un punto para seleccionar tu ficha",
+        "• Si tienes fichas capturadas, click en la BARRA CENTRAL",
         "• Click en otro punto para moverla",
         "• Los puntos verdes muestran movimientos válidos",
         "• Click en la barra lateral para sacar fichas",
@@ -469,11 +520,11 @@ def mostrar_ayuda(surface: pygame.Surface, font: pygame.font.Font) -> None:
         "Presiona H para cerrar"
     ]
 
-    y_inicial = 170
+    y_inicial = 190
     for i, txt in enumerate(textos):
         color = (255, 255, 0) if txt.endswith(":") else (255, 255, 255)
         render = font.render(txt, True, color)
-        surface.blit(render, (ANCHO // 2 - 250, y_inicial + i * 26))
+        surface.blit(render, (ANCHO // 2 - 280, y_inicial + i * 26))
 
 
 def punto_desde_xy(x_pos: int, y_pos: int) -> int | None:
@@ -501,17 +552,27 @@ def punto_desde_xy(x_pos: int, y_pos: int) -> int | None:
     return idx
 
 
-def point_or_out_bar_from_xy(x_pos: int, y_pos: int) -> int | None:
-    """Mapear click a índice 0..23 o al índice 24 (Salida/Bearing Off)."""
+def point_or_out_bar_from_xy(x_pos: int, y_pos: int, juego: Juego) -> int | None:
+    """Mapear click a índice 0..23, BARRA_SELECCION, o PUNTOS (Bearing Off)."""
+    # NUEVO: Detectar click en barra central
+    bar_rect = BOARD.get_bar_rect()
+    if bar_rect.collidepoint(x_pos, y_pos):
+        # Solo permitir seleccionar la barra si el jugador tiene fichas ahí
+        pid = juego.jugador_actual.id
+        if juego.tablero.fichas_en_barra(pid) > 0:
+            return BARRA_SELECCION
+        return None
+
     idx = punto_desde_xy(x_pos, y_pos)
     if idx is not None:
         return idx
 
+    board_rect = BOARD.get_rect()
     rect_out_j1 = pygame.Rect(
-        OUT_BAR_X_J1, MARGEN_Y, OUT_BAR_W, ALTO - 2 * MARGEN_Y
+        OUT_BAR_X_J1, board_rect.top, OUT_BAR_W, board_rect.height
     )
     rect_out_j2 = pygame.Rect(
-        OUT_BAR_X_J2, MARGEN_Y, OUT_BAR_W, ALTO - 2 * MARGEN_Y
+        OUT_BAR_X_J2, board_rect.top, OUT_BAR_W, board_rect.height
     )
 
     if (rect_out_j1.collidepoint(x_pos, y_pos) or
@@ -523,35 +584,40 @@ def point_or_out_bar_from_xy(x_pos: int, y_pos: int) -> int | None:
 
 def manejar_evento_tirada(juego: Juego, font: pygame.font.Font):
     """Maneja el evento de tirar dados."""
+    if juego.movimientos_disponibles():
+        return font.render(
+            "❌ Ya tiraste los dados. Usá tus movimientos primero.",
+            True,
+            (200, 50, 50)
+        )
+
     dado1, dado2, movs = juego.tirar()
 
-    # Verificar si hay movimientos posibles
     pid = juego.jugador_actual.id
     tiene_movimientos = False
 
-    # Verificar si hay fichas en barra
     if juego.tablero.fichas_en_barra(pid) > 0:
         entrada = juego._entrada_para(pid)
         for mov in movs:
-            destino = entrada + mov if pid % 2 == 0 else entrada - mov
+            # ✅ CORRECCIÓN: desde barra, J1 incrementa desde 0, J2 decrementa desde 23
+            destino = entrada + mov if pid % 2 != 0 else entrada - mov
             if 0 <= destino < PUNTOS:
                 ok, _ = juego._validar_movimiento(entrada, destino)
                 if ok:
                     tiene_movimientos = True
                     break
     else:
-        # Verificar movimientos en el tablero
         for punto in range(PUNTOS):
             fichas = juego.tablero.punto(punto)
             if fichas and fichas[0].owner_id == pid:
                 for mov in movs:
-                    destino = (punto + mov) if pid % 2 == 0 else (punto - mov)
+                    # J1 (impar) decrementa en tablero, J2 (par) incrementa en tablero
+                    destino = (punto - mov) if pid % 2 != 0 else (punto + mov)
                     if 0 <= destino < PUNTOS:
                         ok, _ = juego._validar_movimiento(punto, destino)
                         if ok:
                             tiene_movimientos = True
                             break
-                    # Verificar bearing off
                     if juego.tablero.puede_sacar_fichas(pid):
                         ok, _ = juego._validar_movimiento(punto, PUNTOS)
                         if ok:
@@ -561,13 +627,13 @@ def manejar_evento_tirada(juego: Juego, font: pygame.font.Font):
                     break
 
     if not tiene_movimientos:
-        mensaje = f"🎲 Dados: {dado1} y {dado2} → ❌ Sin movimientos posibles"
+        mensaje = f"🎲 {dado1}-{dado2} → ❌ Sin movimientos válidos"
         juego.cambiar_turno()
-        mensaje += f" | Turno de {juego.jugador_actual.nombre}"
+        mensaje += f" | Turno: {juego.jugador_actual.nombre}"
     else:
-        mensaje = f"🎲 Dados: {dado1} y {dado2} → movs: {movs}"
+        mensaje = f"🎲 Dados: {dado1} y {dado2} → {movs}"
         if dado1 == dado2:
-            mensaje = f"🎲 ¡DOBLES! {dado1}-{dado1} → 4 movimientos de {dado1}"
+            mensaje = f"🎲 ¡DOBLES! {dado1}-{dado1} (×4)"
 
     return font.render(mensaje, True, COLOR_TEXTO)
 
@@ -579,29 +645,31 @@ def manejar_movimiento(
     font: pygame.font.Font
 ):
     """Maneja el intento de movimiento de una ficha."""
+    # NUEVO: Si seleccionó la barra, obtener el punto de entrada
+    if sel == BARRA_SELECCION:
+        pid = juego.jugador_actual.id
+        sel = juego._entrada_para(pid)
+
     resultado = juego.mover_ficha(sel, idx)
 
     if resultado:
         movs_restantes = juego.movimientos_disponibles()
 
         if idx == PUNTOS:
-            msg = f"✓ Ficha sacada desde {sel}. "
+            msg = f"✓ Sacada {sel}. "
         else:
-            msg = f"✓ Movimiento {sel}→{idx}. "
+            msg = f"✓ {sel}→{idx}. "
 
-        # Verificar si quedan movimientos
         if not movs_restantes:
-            juego.cambiar_turno()
-            msg += "✅ Turno completado. "
-            msg += f"Turno de {juego.jugador_actual.nombre}"
+            msg += f"✅ Turno: {juego.jugador_actual.nombre}"
         else:
-            msg += f"Restantes: {movs_restantes}"
+            msg += f"Quedan: {movs_restantes}"
 
         if juego.termino():
-            msg = f"🏆 ¡{juego.ganador().nombre} ha ganado el juego!"
+            msg = f"🏆 ¡{juego.ganador().nombre} GANÓ!"
     else:
-        error = juego.ultimo_error() or 'movimiento inválido'
-        msg = f"❌ No se pudo mover {sel}→{idx}. Motivo: {error}"
+        error = juego.ultimo_error() or 'inválido'
+        msg = f"❌ {sel}→{idx}: {error}"
 
     return resultado, font.render(msg, True, COLOR_TEXTO)
 
@@ -611,7 +679,7 @@ def _validar_seleccion(
     juego: Juego
 ) -> int | None:
     """Valida que la selección actual sea válida para el jugador actual."""
-    if seleccionado is None or seleccionado == PUNTOS:
+    if seleccionado is None or seleccionado == PUNTOS or seleccionado == BARRA_SELECCION:
         return seleccionado
 
     pid = juego.jugador_actual.id
@@ -626,11 +694,7 @@ def _manejar_tecla(
     juego: Juego,
     font: pygame.font.Font
 ) -> tuple[bool, pygame.Surface | None, int | None, bool]:
-    """Maneja eventos de teclado.
-
-    Returns:
-        (continuar, ultimo_txt, seleccionado, mostrar_ayuda_flag)
-    """
+    """Maneja eventos de teclado."""
     if tecla == pygame.K_ESCAPE:
         return False, None, None, False
 
@@ -639,21 +703,15 @@ def _manejar_tecla(
         return True, txt, None, False
 
     if tecla == pygame.K_d:
-        # Deseleccionar con tecla D
         txt = font.render("↩️ Deseleccionado", True, COLOR_TEXTO)
-        return True, txt, None, False
-
-    if tecla == pygame.K_c:
-        juego.cambiar_turno()
-        txt = font.render("🔄 Turno cambiado", True, COLOR_TEXTO)
         return True, txt, None, False
 
     if tecla == pygame.K_r:
         juego.reiniciar()
-        txt = font.render("♻️ Juego reiniciado", True, COLOR_TEXTO)
+        txt = font.render("♻️ Reiniciado", True, COLOR_TEXTO)
         return True, txt, None, False
 
-    return True, None, None, None  # No cambiar nada
+    return True, None, None, None
 
 
 def _manejar_click(
@@ -662,58 +720,42 @@ def _manejar_click(
     juego: Juego,
     font: pygame.font.Font
 ) -> tuple[int | None, pygame.Surface | None]:
-    """Maneja eventos de click del mouse.
+    """Maneja eventos de click del mouse."""
+    idx = point_or_out_bar_from_xy(*pos, juego)
 
-    Returns:
-        (seleccionado, ultimo_txt)
-    """
-    idx = point_or_out_bar_from_xy(*pos)
-
-    # Click en espacio vacío → deseleccionar
     if idx is None:
         if seleccionado is not None:
             txt = font.render("↩️ Deseleccionado", True, COLOR_TEXTO)
             return None, txt
         return None, None
 
-    # Si es el primer click (seleccionar origen)
     if seleccionado is None:
+        # NUEVO: Permitir seleccionar la barra
+        if idx == BARRA_SELECCION:
+            return BARRA_SELECCION, None
+
         if idx == PUNTOS:
             return None, None
 
-        # Verificar si hay fichas en la barra
         pid = juego.jugador_actual.id
         fichas_barra = juego.tablero.fichas_en_barra(pid)
 
         if fichas_barra > 0:
-            # DEBE mover desde la barra primero
-            entrada = juego._entrada_para(pid)
-            if idx != entrada:
-                msg = (
-                    f"❌ Tienes {fichas_barra} ficha(s) en la BARRA. "
-                    f"Debes reingresarlas desde el punto {entrada} primero."
-                )
-                return None, font.render(msg, True, (200, 50, 50))
+            msg = "❌ Primero reingresa tus fichas de la BARRA (click en barra central)"
+            return None, font.render(msg, True, (200, 50, 50))
 
-        # Verificar que el punto tenga fichas del jugador
         fichas = juego.tablero.punto(idx)
         if not any(f.owner_id == pid for f in fichas):
             msg = "❌ No tienes fichas en ese punto."
             return None, font.render(msg, True, (200, 50, 50))
 
-        # Verificar que la ficha tenga movimientos válidos
         if not _tiene_movimientos_validos(juego, idx):
-            msg = (
-                f"❌ La ficha en el punto {idx} no tiene movimientos válidos "
-                "con los dados actuales. Selecciona otra ficha."
-            )
+            msg = f"❌ Punto {idx}: sin movimientos válidos"
             return None, font.render(msg, True, (200, 50, 50))
 
         return idx, None
 
-    # Si ya hay algo seleccionado
     if idx == seleccionado:
-        # Click en la misma ficha → deseleccionar
         txt = font.render("↩️ Deseleccionado", True, COLOR_TEXTO)
         return None, txt
 
@@ -727,68 +769,59 @@ def _dibujar_hud(
     surface: pygame.Surface,
     juego: Juego,
     ultimo_txt: pygame.Surface | None,
-    f28: pygame.font.Font,
-    f18: pygame.font.Font,
+    f24: pygame.font.Font,
     f16: pygame.font.Font
 ) -> None:
-    """Dibuja el HUD con información del juego."""
+    """Dibuja el HUD en la barra superior (fuera del tablero)."""
+    hud_rect = pygame.Rect(0, 0, ANCHO, HUD_HEIGHT)
+    pygame.draw.rect(surface, (220, 215, 210), hud_rect)
+    pygame.draw.line(surface, LINE, (0, HUD_HEIGHT), (ANCHO, HUD_HEIGHT), 2)
+
     movs = juego.movimientos_disponibles()
 
-    # Título en la parte superior - MÁS COMPACTO
-    titulo = f28.render("Backgammon", True, COLOR_TEXTO)
-    surface.blit(titulo, (20, 15))
+    titulo = f24.render("🎲 Backgammon", True, COLOR_TEXTO)
+    surface.blit(titulo, (15, 12))
 
-    # Controles en líneas separadas - MUCHO MÁS PEQUEÑO Y COMPACTO
-    controles = [
-        "[T: tirar] [D/ESC: deselec.] [C: turno]",
-        "[R: reiniciar] [H: ayuda]"
-    ]
-    y_pos = 48
-    for ctrl in controles:
-        ctrl_render = f16.render(ctrl, True, (80, 80, 80))
-        surface.blit(ctrl_render, (20, y_pos))
-        y_pos += 18
+    controles = "[T:tirar] [D:deselec] [R:reiniciar] [H:ayuda]"
+    ctrl_render = f16.render(controles, True, (100, 100, 100))
+    surface.blit(ctrl_render, (15, 42))
 
-    # Indicador visual fuerte de turno
-    turno_color = COLOR_J1 if juego.jugador_actual.id % 2 == 0 else COLOR_J2
+    estado = f"{juego.estado} | Turnos automáticos"
+    estado_render = f16.render(estado, True, (120, 120, 120))
+    surface.blit(estado_render, (15, 64))
+
+    turno_color = COLOR_J1 if juego.jugador_actual.id % 2 != 0 else COLOR_J2
     turno_bg = (100, 180, 100) if movs else (180, 100, 100)
 
-    # Rectángulo de turno prominente
-    turno_rect = pygame.Rect(ANCHO - 280, 15, 260, 70)
-    pygame.draw.rect(surface, turno_bg, turno_rect, border_radius=10)
-    pygame.draw.rect(surface, LINE, turno_rect, 3, border_radius=10)
+    turno_rect = pygame.Rect(ANCHO - 320, 10, 305, 80)
+    pygame.draw.rect(surface, turno_bg, turno_rect, border_radius=12)
+    pygame.draw.rect(surface, LINE, turno_rect, 3, border_radius=12)
 
-    # Nombre del jugador y fichas
+    simbolo = "●" if juego.jugador_actual.id % 2 != 0 else "○"
     nombre_font = pygame.font.Font(None, 32)
     nombre = nombre_font.render(
-        f"🎲 {juego.jugador_actual.nombre}",
+        f"{simbolo} {juego.jugador_actual.nombre}",
         True,
         turno_color
     )
-    surface.blit(nombre, (turno_rect.x + 15, turno_rect.y + 8))
+    surface.blit(nombre, (turno_rect.x + 15, turno_rect.y + 12))
 
-    # Dados disponibles o "Tira los dados"
     if movs:
         movs_txt = f"Dados: {movs}"
-        estado_txt = "✅ Jugando..."
     else:
         movs_txt = "Presiona T para tirar"
-        estado_txt = "⏳ Esperando dados"
 
-    dados_render = f18.render(movs_txt, True, COLOR_TEXTO)
-    surface.blit(dados_render, (turno_rect.x + 15, turno_rect.y + 40))
-
-    # Info adicional - MÁS COMPACTA
-    estado_info = f"{juego.estado} | {estado_txt} | ID: {juego.jugador_actual.id}"
-    info = f16.render(estado_info, True, (100, 100, 100))
-    surface.blit(info, (20, 86))
+    dados_render = f16.render(movs_txt, True, COLOR_TEXTO)
+    surface.blit(dados_render, (turno_rect.x + 15, turno_rect.y + 50))
 
     if ultimo_txt:
-        # Último mensaje en recuadro - MÁS ABAJO para no solaparse
-        msg_rect = pygame.Rect(20, 108, ultimo_txt.get_width() + 20, 30)
+        msg_y = HUD_HEIGHT + 5
+        msg_rect = pygame.Rect(
+            15, msg_y, ultimo_txt.get_width() + 20, 30
+        )
         pygame.draw.rect(surface, (240, 240, 240), msg_rect, border_radius=8)
         pygame.draw.rect(surface, LINE, msg_rect, 2, border_radius=8)
-        surface.blit(ultimo_txt, (30, 115))
+        surface.blit(ultimo_txt, (25, msg_y + 7))
 
 
 def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
@@ -801,7 +834,7 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
     pygame.display.set_caption("Backgammon — Computación 2025")
     clock = pygame.time.Clock()
 
-    f28 = pygame.font.Font(None, 28)
+    f24 = pygame.font.Font(None, 24)
     f20 = pygame.font.Font(None, 20)
     f18 = pygame.font.Font(None, 18)
     f16 = pygame.font.Font(None, 16)
@@ -817,7 +850,7 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
 
     corriendo = True
     while corriendo:
-        BOARD.get_rect()  # Inicializar geometría
+        BOARD.get_rect()
         seleccionado = _validar_seleccion(seleccionado, juego)
 
         for evento in pygame.event.get():
@@ -830,12 +863,11 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
                 elif evento.key == pygame.K_ESCAPE and mostrar_ayuda_flag:
                     mostrar_ayuda_flag = False
                 elif evento.key == pygame.K_ESCAPE and seleccionado is not None:
-                    # ESC para deseleccionar
                     seleccionado = None
-                    ultimo_txt = f20.render("↩️ Deseleccionado", True, COLOR_TEXTO)
+                    ultimo_txt = f18.render("↩️ Deseleccionado", True, COLOR_TEXTO)
                 else:
                     cont, txt, sel, ayuda = _manejar_tecla(
-                        evento.key, juego, f20
+                        evento.key, juego, f18
                     )
                     if not cont:
                         corriendo = False
@@ -849,31 +881,27 @@ def iniciar_ui(ancho: int = ANCHO, alto: int = ALTO) -> None:
             elif evento.type == pygame.MOUSEBUTTONDOWN and evento.button == 1:
                 if not mostrar_ayuda_flag:
                     nuevo_sel, txt = _manejar_click(
-                        evento.pos, seleccionado, juego, f20
+                        evento.pos, seleccionado, juego, f18
                     )
                     if txt:
                         ultimo_txt = txt
                     if nuevo_sel is not None or txt:
                         seleccionado = nuevo_sel
 
-        # Dibujo
         screen.fill(BG_COLOR)
-
+        _dibujar_hud(screen, juego, ultimo_txt, f24, f16)
         draw_bearing_off_bar(screen, juego, f20)
         dibujar_marco_y_labels(screen, f20)
         dibujar_triangulos(screen)
-
-        dibujar_punto_seleccionado(screen, seleccionado)
+        dibujar_punto_seleccionado(screen, seleccionado, juego)
         dibujar_hints(
             screen, seleccionado, juego.movimientos_disponibles(), juego
         )
         dibujar_fichas(screen, juego, f20)
         dibujar_barra(screen, juego, f20)
 
-        _dibujar_hud(screen, juego, ultimo_txt, f28, f18, f16)
-
         if mostrar_ayuda_flag:
-            mostrar_ayuda(screen, f20)
+            mostrar_ayuda(screen, f18)
 
         pygame.display.flip()
         clock.tick(FPS)

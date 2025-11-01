@@ -72,15 +72,20 @@ class Juego:
 
     def es_ficha_mas_lejana(self, jugador_id: int, punto: int) -> bool:
         """Verifica si la ficha en 'punto' es la más lejana del home board."""
-        if jugador_id % 2 != 0:
-            for i in range(18, punto):
+        # J1 (impar) mueve de 23→0, home en 0-5
+        # J2 (par) mueve de 0→23, home en 18-23
+        if jugador_id % 2 != 0:  # J1
+            # Para J1, la más lejana es la de mayor número
+            for i in range(punto + 1, PUNTOS):
                 if any(f.owner_id == jugador_id for f in self.__tablero__.punto(i)):
                     return False
             return True
-        for i in range(punto + 1, 6):
-            if any(f.owner_id == jugador_id for f in self.__tablero__.punto(i)):
-                return False
-        return True
+        else:  # J2
+            # Para J2, la más lejana es la de menor número
+            for i in range(0, punto):
+                if any(f.owner_id == jugador_id for f in self.__tablero__.punto(i)):
+                    return False
+            return True
 
     def _entrada_para(self, pid: int) -> int:
         """Punto de entrada (desde la barra) para el jugador."""
@@ -100,10 +105,12 @@ class Juego:
             self._set_error(msg)
             return False, 0
 
-        if pid % 2 != 0:
-            distancia = PUNTOS - desde
-        else:
+        # J1 (impar): home en 0-5, mueve hacia 0
+        # J2 (par): home en 18-23, mueve hacia 23
+        if pid % 2 != 0:  # J1
             distancia = desde + 1
+        else:  # J2
+            distancia = PUNTOS - desde
 
         if distancia in self.__movs_restantes__:
             return True, distancia
@@ -149,11 +156,12 @@ class Juego:
 
         else:
             distancia = abs(hasta - desde)
-            if pid % 2 != 0:
+            # CORRECCIÓN: J1 (impar) debe DECREMENTAR, J2 (par) debe INCREMENTAR
+            if pid % 2 != 0:  # J1 - mueve de mayor a menor (23→0)
                 if hasta >= desde:
                     self._set_error("el jugador debe moverse hacia adelante")
                     return False, distancia
-            else:
+            else:  # J2 - mueve de menor a mayor (0→23)
                 if hasta <= desde:
                     self._set_error("el jugador debe moverse hacia adelante")
                     return False, distancia
@@ -189,10 +197,10 @@ class Juego:
         if hasta == PUNTOS:
             ok = self.__tablero__.sacar_ficha(pid, desde)
             if ok:
-                if pid % 2 != 0:
-                    distancia_a_salida = PUNTOS - desde
-                else:
+                if pid % 2 != 0:  # J1
                     distancia_a_salida = desde + 1
+                else:  # J2
+                    distancia_a_salida = PUNTOS - desde
 
                 if distancia not in self.__movs_restantes__:
                     dado_consumido = self._dado_mayor_que(distancia_a_salida)

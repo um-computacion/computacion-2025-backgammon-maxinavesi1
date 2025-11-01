@@ -434,23 +434,26 @@ class PruebasJuego(unittest.TestCase):
         """J1 saca ficha usando dado exacto."""
         juego = Juego(Jugador("A"), Jugador("B"))
         pid = juego.jugador_actual.id
-        pos_ficha = 22
+        # J1 home está en 0-5, poner ficha en punto 2
+        pos_ficha = 2  # ✅ CORREGIDO: antes era 22
         preparar_bearing_off(juego, pid, pos_ficha)
-        juego.__movs_restantes__ = [2, 6]
+        juego.__movs_restantes__ = [3, 6]  # ✅ CORREGIDO: distancia desde 2 es 3
 
         resultado = juego.mover_ficha(pos_ficha, PUNTOS)
 
         self.assertTrue(resultado)
         self.assertEqual(juego.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR)
         self.assertEqual(juego.movimientos_disponibles(), [6])
+
 
     def test_bearing_off_over_bearing_j1_consume_dado_mayor(self):
         """J1 saca ficha con over-bearing usando dado mayor."""
         juego = Juego(Jugador("A"), Jugador("B"))
         pid = juego.jugador_actual.id
-        pos_ficha = 23
+        # J1 home está en 0-5, poner ficha en punto 1
+        pos_ficha = 1  # ✅ CORREGIDO: antes era 23
         preparar_bearing_off(juego, pid, pos_ficha)
-        juego.__movs_restantes__ = [5, 6]
+        juego.__movs_restantes__ = [5, 6]  # ✅ CORREGIDO: distancia desde 1 es 2, pero no hay dado 2
 
         resultado = juego.mover_ficha(pos_ficha, PUNTOS)
 
@@ -458,24 +461,32 @@ class PruebasJuego(unittest.TestCase):
         self.assertEqual(juego.tablero.fichas_salidas(pid), FICHAS_POR_JUGADOR)
         self.assertEqual(juego.movimientos_disponibles(), [6])
 
+
     def test_bearing_off_over_bearing_falla_si_hay_ficha_mas_lejana_j1(self):
         """J1 no puede usar dado mayor si hay ficha más lejana."""
         juego = Juego(Jugador("A"), Jugador("B"))
         pid = juego.jugador_actual.id
+
         juego.tablero.preparar_posicion_inicial()
+
         juego.tablero.__salidas__ = {pid: FICHAS_POR_JUGADOR - 2}
-        juego.tablero.colocar_ficha(pid, 23)
-        juego.tablero.colocar_ficha(pid, 21)
+
+        if pid % 2 != 0:
+            juego.tablero.colocar_ficha(pid, 1)
+            juego.tablero.colocar_ficha(pid, 3)
+            punto_a_intentar = 1
+        else:
+            juego.tablero.colocar_ficha(pid, 22)
+            juego.tablero.colocar_ficha(pid, 20)
+            punto_a_intentar = 22
         juego.__movs_restantes__ = [5, 6]
-
-        resultado = juego.mover_ficha(23, PUNTOS)
-
+        resultado = juego.mover_ficha(punto_a_intentar, PUNTOS)
         self.assertFalse(resultado)
         self.assertIn("más lejos que requieren un dado menor",
-                      juego.ultimo_error() or "")
+                  juego.ultimo_error() or "")
         self.assertEqual(juego.movimientos_disponibles(), [5, 6])
         self.assertEqual(juego.tablero.fichas_salidas(pid),
-                        FICHAS_POR_JUGADOR - 2)
+                    FICHAS_POR_JUGADOR - 2)
 
     def test_bearing_off_falla_si_no_puede_sacar_fichas(self):
         """Falla si no se cumple condición de home board."""
@@ -494,9 +505,9 @@ class PruebasJuego(unittest.TestCase):
         """J2 saca ficha usando dado exacto."""
         juego = Juego(Jugador("A"), Jugador("B"), indice_inicial=1)
         pid = juego.jugador_actual.id
-        pos_ficha = 2
+        pos_ficha = 21  # ✅
         preparar_bearing_off(juego, pid, pos_ficha)
-        juego.__movs_restantes__ = [3]
+        juego.__movs_restantes__ = [3]  # ✅
 
         resultado = juego.mover_ficha(pos_ficha, PUNTOS)
 
@@ -533,9 +544,9 @@ class PruebasJuego(unittest.TestCase):
         pid = juego.jugador_actual.id
         if pid % 2 != 0:  # Solo si es J1
             juego.tablero.preparar_posicion_inicial()
-            juego.tablero.colocar_ficha(pid, 23)
-            juego.tablero.colocar_ficha(pid, 20)
-            resultado = juego.es_ficha_mas_lejana(pid, 23)
+            juego.tablero.colocar_ficha(pid, 1)
+            juego.tablero.colocar_ficha(pid, 4)
+            resultado = juego.es_ficha_mas_lejana(pid, 1)
             self.assertFalse(resultado)
 
     def test_es_ficha_mas_lejana_j2_con_fichas_mas_lejos(self):
@@ -544,9 +555,9 @@ class PruebasJuego(unittest.TestCase):
         pid = juego.jugador_actual.id
         if pid % 2 == 0:
             juego.tablero.preparar_posicion_inicial()
-            juego.tablero.colocar_ficha(pid, 0)
-            juego.tablero.colocar_ficha(pid, 3)
-            resultado = juego.es_ficha_mas_lejana(pid, 0)
+            juego.tablero.colocar_ficha(pid, 23)
+            juego.tablero.colocar_ficha(pid, 20)
+            resultado = juego.es_ficha_mas_lejana(pid, 23)
             self.assertFalse(resultado)
 
     def test_validar_bearing_off_sin_dado_ni_sobrepasar(self):
