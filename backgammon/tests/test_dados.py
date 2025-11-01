@@ -1,83 +1,110 @@
+"""Tests para el módulo dados."""
 import unittest
 from backgammon.core.dados import Dados
 
 
 class PruebasDados(unittest.TestCase):
+    """Pruebas para la clase Dados."""
 
     def test_formato_tirada(self):
-        d = Dados(semilla=123)
-        d1, d2, movs = d.tirar()
-        self.assertTrue(1 <= d1 <= 6)
-        self.assertTrue(1 <= d2 <= 6)
-        self.assertIn(len(movs), (2, 4))
+        """Verifica que tirar() devuelva valores en el formato correcto."""
+        dados = Dados(semilla=123)
+        dado1, dado2, movimientos = dados.tirar()
+        self.assertTrue(1 <= dado1 <= 6)
+        self.assertTrue(1 <= dado2 <= 6)
+        self.assertIn(len(movimientos), (2, 4))
 
     def test_rango_en_varias_tiradas(self):
-        d = Dados(semilla=42)
+        """Verifica que múltiples tiradas respeten el rango 1-6."""
+        dados = Dados(semilla=42)
         for _ in range(200):
-            d1, d2, _ = d.tirar()
-            self.assertTrue(1 <= d1 <= 6)
-            self.assertTrue(1 <= d2 <= 6)
+            dado1, dado2, _ = dados.tirar()
+            self.assertTrue(1 <= dado1 <= 6)
+            self.assertTrue(1 <= dado2 <= 6)
 
     def test_ultimo_tiro_actualiza(self):
-        d = Dados(semilla=7)
-        self.assertIsNone(d.ultimo_tiro())
-        d1, d2, movs = d.tirar()
-        self.assertEqual(d.ultimo_tiro(), (d1, d2, movs))
+        """Verifica que ultimo_tiro() se actualice correctamente."""
+        dados = Dados(semilla=7)
+        self.assertIsNone(dados.ultimo_tiro())
+        dado1, dado2, movimientos = dados.tirar()
+        self.assertEqual(dados.ultimo_tiro(), (dado1, dado2, movimientos))
 
     def test_tirar_con_doble_registra_cuatro_movimientos(self):
-        d = Dados(semilla=1)
+        """Verifica que un doble genere 4 movimientos."""
+        dados = Dados(semilla=1)
         for _ in range(300):
-            d1, d2, movs = d.tirar()
-            if d1 == d2:
-                self.assertEqual(len(movs), 4)
-                self.assertEqual(d.ultimo_tiro(), (d1, d2, movs))
+            dado1, dado2, movimientos = dados.tirar()
+            if dado1 == dado2:
+                self.assertEqual(len(movimientos), 4)
+                self.assertEqual(dados.ultimo_tiro(), (dado1, dado2, movimientos))
                 return
         self.fail("No salió un doble en 300 tiradas")
 
     def test_tirar_sin_doble_registra_dos_movimientos(self):
-        d = Dados(semilla=2)
+        """Verifica que una tirada sin doble genere 2 movimientos."""
+        dados = Dados(semilla=2)
         for _ in range(300):
-            d1, d2, movs = d.tirar()
-            if d1 != d2:
-                self.assertEqual(movs, [d1, d2])
-                self.assertEqual(d.ultimo_tiro(), (d1, d2, movs))
+            dado1, dado2, movimientos = dados.tirar()
+            if dado1 != dado2:
+                self.assertEqual(movimientos, [dado1, dado2])
+                self.assertEqual(dados.ultimo_tiro(), (dado1, dado2, movimientos))
                 return
-        self.fail("Todas las tiradas fueron dobles en 300 intentos (muy improbable)")
+        self.fail("Todas las tiradas fueron dobles en 300 intentos")
 
     def test_fijar_semilla_reproduce_y_resetea(self):
-        d = Dados()
-        d.fijar_semilla(123)
-        r1 = d.tirar()
-        d.fijar_semilla(123)
-        r2 = d.tirar()
-        self.assertEqual(r1, r2)
-        d.fijar_semilla(321)
-        self.assertIsNone(d.ultimo_tiro())
+        """Verifica que fijar_semilla() reproduzca tiradas y resetee historial."""
+        dados = Dados()
+        dados.fijar_semilla(123)
+        resultado1 = dados.tirar()
+        dados.fijar_semilla(123)
+        resultado2 = dados.tirar()
+        self.assertEqual(resultado1, resultado2)
+        dados.fijar_semilla(321)
+        self.assertIsNone(dados.ultimo_tiro())
 
     def test_fijar_semilla_reproduce_tirada(self):
-        d = Dados()
-        d.fijar_semilla(5)
-        a = d.tirar()
-        d.fijar_semilla(5)
-        b = d.tirar()
-        self.assertEqual(a, b)
+        """Verifica que fijar_semilla() produzca tiradas reproducibles."""
+        dados = Dados()
+        dados.fijar_semilla(5)
+        tirada_a = dados.tirar()
+        dados.fijar_semilla(5)
+        tirada_b = dados.tirar()
+        self.assertEqual(tirada_a, tirada_b)
 
     def test_ultimo_tiro_cambia_en_cada_tirada(self):
-        d = Dados(semilla=10)
-        r1 = d.tirar()
-        self.assertEqual(d.ultimo_tiro(), r1)
-        r2 = d.tirar()
-        self.assertEqual(d.ultimo_tiro(), r2)
-        self.assertNotEqual(r1, r2)
+        """Verifica que ultimo_tiro() se actualice en cada tirada."""
+        dados = Dados(semilla=10)
+        resultado1 = dados.tirar()
+        self.assertEqual(dados.ultimo_tiro(), resultado1)
+        resultado2 = dados.tirar()
+        self.assertEqual(dados.ultimo_tiro(), resultado2)
+        self.assertNotEqual(resultado1, resultado2)
 
     def test_cambiar_semilla_cambia_secuencia_y_borra_historial(self):
-        d = Dados()
-        d.fijar_semilla(11)
-        a = d.tirar()
-        d.fijar_semilla(12)
-        self.assertIsNone(d.ultimo_tiro())
-        b = d.tirar()
-        self.assertNotEqual(a, b)
+        """Verifica que cambiar semilla modifique secuencia y borre historial."""
+        dados = Dados()
+        dados.fijar_semilla(11)
+        tirada_a = dados.tirar()
+        dados.fijar_semilla(12)
+        self.assertIsNone(dados.ultimo_tiro())
+        tirada_b = dados.tirar()
+        self.assertNotEqual(tirada_a, tirada_b)
+
+    def test_inicializar_con_semilla(self):
+        """Verifica que se pueda inicializar con semilla."""
+        dados1 = Dados(semilla=100)
+        dados2 = Dados(semilla=100)
+        tirada1 = dados1.tirar()
+        tirada2 = dados2.tirar()
+        self.assertEqual(tirada1, tirada2)
+
+    def test_inicializar_sin_semilla(self):
+        """Verifica que se pueda inicializar sin semilla."""
+        dados = Dados()
+        dado1, dado2, movimientos = dados.tirar()
+        self.assertTrue(1 <= dado1 <= 6)
+        self.assertTrue(1 <= dado2 <= 6)
+        self.assertIsInstance(movimientos, list)
 
 
 if __name__ == "__main__":

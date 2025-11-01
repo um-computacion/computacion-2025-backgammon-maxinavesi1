@@ -175,10 +175,12 @@ class Tablero:
 
     def puede_sacar_fichas(self, jugador_id: int) -> bool:
         """Verifica si el jugador tiene todas sus fichas restantes en su home board."""
-        if jugador_id % 2 != 0:
-            puntos_a_revisar = range(0, 18)
-        else:
+        # J1 (impar): home en 0-5, revisar 6-23
+        # J2 (par): home en 18-23, revisar 0-17
+        if jugador_id % 2 != 0:  # J1
             puntos_a_revisar = range(6, 24)
+        else:  # J2
+            puntos_a_revisar = range(0, 18)
 
         if self.fichas_en_barra(jugador_id) > 0:
             return False

@@ -1,16 +1,20 @@
 [run]
-# Mide únicamente el core del proyecto (no CLI, no Pygame, no tests)
-source = backgammon/core
+# Mide core + CLI (todo el directorio cli)
+source = backgammon/core,backgammon/cli
 branch = True
 omit =
     */__init__.py
+    */tests/*
 
 [report]
 show_missing = True
 skip_empty = True
-# (cinturón y tiradores) fuerza el filtrado también al generar el informe
 include =
     backgammon/core/*.py
+    backgammon/cli/*.py
 omit =
     */__init__.py
     */tests/*
+
+[html]
+directory = htmlcov
