@@ -599,7 +599,7 @@ def manejar_evento_tirada(juego: Juego, font: pygame.font.Font):
     if juego.tablero.fichas_en_barra(pid) > 0:
         entrada = juego._entrada_para(pid)
         for mov in movs:
-            # ✅ CORRECCIÓN: desde barra, J1 incrementa desde 0, J2 decrementa desde 23
+            #Desde barra, J1 incrementa desde 0, J2 decrementa desde 23
             destino = entrada + mov if pid % 2 != 0 else entrada - mov
             if 0 <= destino < PUNTOS:
                 ok, _ = juego._validar_movimiento(entrada, destino)
